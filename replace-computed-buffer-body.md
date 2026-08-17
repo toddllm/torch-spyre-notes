@@ -353,7 +353,172 @@ sequence of steps must each be found and updated separately.
 
 ---
 
-## 6. What to take away
+## 6. A concrete example of the same protocol, open-coded
+
+The best way to see why concentrating the invariants in one helper is
+worthwhile is to look at a second site in the same repository that
+performs the same replacement without calling the helper. The relevant
+site is inside the pass that inserts *restickify* operations — a
+layout-conversion pass that runs over the loop-level IR and, when it
+retargets a consumer to read from a newly-inserted buffer, has to
+replace the consumer's computed buffer with a fresh object.
+
+- **File:** `torch_spyre/_inductor/insert_restickify.py`
+- **Permalink to the replacement block:**
+  <https://github.com/torch-spyre/torch-spyre/blob/2b3ca93f12cc2571031c63514b723bc54aa55703/torch_spyre/_inductor/insert_restickify.py#L240-L264>
+
+For comparison, the helper this document walks through:
+
+- **File:** `torch_spyre/_inductor/pass_utils.py`
+- **Permalink:**
+  <https://github.com/torch-spyre/torch-spyre/blob/2b3ca93f12cc2571031c63514b723bc54aa55703/torch_spyre/_inductor/pass_utils.py#L1181-L1199>
+
+At the pinned SHA, `insert_restickify.py` does not import
+`replace_computed_buffer_body`. The nine-step protocol is spelled out
+inline instead.
+
+### 6.1 The two blocks, side by side
+
+The helper (`pass_utils.py`, lines 1181–1199):
+
+```python
+# Always wrap the original inner_fn via WrapperHandler; never rebuild
+# index expressions from scratch (they go stale — see issue #2797).
+new_buf = ComputedBuffer(
+    name=op.get_name(),
+    layout=op.layout,
+    data=new_data,
+    _split_size=op._split_size,
+    _original_inner_fn=op._original_inner_fn,
+    _original_ranges=op._original_ranges,
+    _original_reduction_ranges=op._original_reduction_ranges,
+)
+new_buf.operation_name = op.operation_name
+preserve_provenance(op, new_buf, pass_name=pass_name, reason=reason)
+copy_op_metadata(op, new_buf)
+ComputedBuffer.get_default_sizes_body.clear_cache(new_buf)
+
+op_idx = operations.index(op)
+operations[op_idx] = new_buf
+return new_buf
+```
+
+The open-coded version (`insert_restickify.py`, lines 240–264):
+
+```python
+# Reconstruct ComputedBuffer as a fresh object so the instance-keyed cache
+# on get_default_sizes_body can be cleanly invalidated below.
+new_consumer_buffer = ComputedBuffer(
+    name=op.get_name(),
+    layout=op.layout,
+    data=op.data,
+    _split_size=op._split_size,
+    _original_inner_fn=op._original_inner_fn,
+    _original_ranges=op._original_ranges,
+    _original_reduction_ranges=op._original_reduction_ranges,
+)
+new_consumer_buffer.operation_name = op.operation_name
+preserve_provenance(
+    op,
+    new_consumer_buffer,
+    pass_name="insert_restickify",
+    reason="redirect consumer to restickified input",
+)
+copy_op_metadata(op, new_consumer_buffer)
+# Replace op in the operations list with the reconstructed buffer.
+operations[op_index] = new_consumer_buffer
+V.graph.name_to_buffer[new_consumer_buffer.get_name()] = new_consumer_buffer
+
+# Invalidate the sizes/body cache so it is recomputed on next access with the patched inner_fn.
+ComputedBuffer.get_default_sizes_body.clear_cache(new_consumer_buffer)
+```
+
+Setting aside the annotation comment, the local variable name, and the
+inline literals for `pass_name` and `reason`, these two blocks are
+performing the same nine-item procedure from section 4:
+
+| Invariant                                | Helper                                            | Open-coded site                                   |
+|------------------------------------------|---------------------------------------------------|---------------------------------------------------|
+| Buffer name                              | `name=op.get_name()`                              | `name=op.get_name()`                              |
+| Layout                                   | `layout=op.layout`                                | `layout=op.layout`                                |
+| Loop description                         | `data=new_data`                                   | `data=op.data`  (mutated in place just above)     |
+| Loop-shape metadata                      | four `_split_size` / `_original_*` kwargs         | four `_split_size` / `_original_*` kwargs         |
+| Operation name                           | `new_buf.operation_name = op.operation_name`      | `new_consumer_buffer.operation_name = op.operation_name` |
+| Provenance chain                         | `preserve_provenance(...)`                        | `preserve_provenance(...)`                        |
+| Backend-specific metadata                | `copy_op_metadata(op, new_buf)`                   | `copy_op_metadata(op, new_consumer_buffer)`       |
+| Instance-cache invalidation              | `ComputedBuffer.get_default_sizes_body.clear_cache(new_buf)` | `ComputedBuffer.get_default_sizes_body.clear_cache(new_consumer_buffer)` |
+| Splice into operation list               | `operations[op_idx] = new_buf`                    | `operations[op_index] = new_consumer_buffer`      |
+
+The open-coded site does one thing the helper does not: it also updates
+the graph-wide name-to-buffer index on line 261:
+
+```python
+V.graph.name_to_buffer[new_consumer_buffer.get_name()] = new_consumer_buffer
+```
+
+This is the caller-responsibility item flagged in section 5. It is
+correct here. It is also the kind of step that is easy to leave out
+elsewhere, which is exactly why the helper's docstring names it
+explicitly.
+
+### 6.2 Why this duplication matters
+
+The two blocks are semantically equivalent. That is precisely the
+problem. Every invariant that has to hold for a computed-buffer
+replacement to be safe is encoded twice — once in the helper, once in
+this pass. If a tenth invariant is discovered (say, a new metadata
+field on the computed buffer, or a second cached analysis that must
+be invalidated), the helper can be updated in one place, but the
+open-coded site will silently continue doing the previous nine steps
+and quietly diverge.
+
+The failure mode of that divergence is worth stating concretely.
+Because the buffer name is preserved, `name_to_buffer` lookups keep
+resolving. Because `operation_name` is preserved, operation-level
+lookups keep resolving. Because provenance is preserved, debug output
+still names the pass. The graph will look correct in every top-level
+view. The only observable difference will be whatever piece of state
+the new invariant governs — often an analysis that returns a stale
+answer, or a metadata field that a much later pass reads and acts on
+without realizing it came from a stage before the replacement. The
+mutation site will not raise. The failure will surface one or two
+passes downstream, in code that has no obvious connection to the
+retiling pass, layout pass, or dedup pass that produced the drift.
+
+### 6.3 What the minimal repair looks like
+
+The open-coded block can be replaced by two lines that delegate to the
+helper and then add the one caller-responsibility step:
+
+```python
+new_consumer_buffer = replace_computed_buffer_body(
+    op,
+    op.data,
+    operations,
+    pass_name="insert_restickify",
+    reason="redirect consumer to restickified input",
+)
+V.graph.name_to_buffer[new_consumer_buffer.get_name()] = new_consumer_buffer
+```
+
+The change is purely structural. It removes about twenty-two lines of
+open-coded state management and keeps the one line that the helper
+declines to own on the caller's behalf. Once the two sites use the
+same helper, any future invariant learned in one place propagates to
+the other for free.
+
+There is a variant refactor worth mentioning even if it is out of
+scope for this document: the graph-wide `name_to_buffer` update is the
+same one line at every caller. It is a candidate for a follow-on
+change that either (a) extends the helper to accept the graph object
+and perform the update itself, or (b) introduces a thin graph-editor
+wrapper that owns both the object-level and graph-level halves of the
+protocol. Either version would remove the last piece of duplicated
+state-management knowledge from every caller of this helper.
+
+---
+
+## 7. What to take away
 
 The forty lines of `replace_computed_buffer_body` are a compact record
 of what it takes to modify one node of a loop-level IR without
