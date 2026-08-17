@@ -355,13 +355,42 @@ sequence of steps must each be found and updated separately.
 
 ## 6. A concrete example of the same protocol, open-coded
 
-The best way to see why concentrating the invariants in one helper is
-worthwhile is to look at a second site in the same repository that
-performs the same replacement without calling the helper. The relevant
-site is inside the pass that inserts *restickify* operations — a
-layout-conversion pass that runs over the loop-level IR and, when it
-retargets a consumer to read from a newly-inserted buffer, has to
-replace the consumer's computed buffer with a fresh object.
+### 6.0 Why this is worth calling out
+
+The previous sections established two things:
+
+1. Replacing the body of a computed buffer requires holding **nine
+   distinct invariants** coherent at once (section 4).
+2. Those invariants are not orthogonal — several of them (identity,
+   layout, provenance, cache validity, and list position) each
+   correspond to a specific piece of state that a *different*
+   downstream reader depends on. A replacement that gets eight of
+   them right and one of them wrong produces a graph that still
+   loads, still lowers, still enters the scheduler, and fails
+   somewhere else (section 3).
+
+Given that shape of problem, concentrating the nine steps in one
+helper is not a stylistic preference. It is the mechanism that keeps
+the invariant list *knowable*: a compiler engineer who needs to
+understand what a computed-buffer replacement entails can read one
+function, and a compiler engineer who discovers a tenth invariant can
+add it to one place and know that every call site benefits.
+
+That mechanism only holds to the extent that all
+computed-buffer replacements actually go through the helper. If any
+call site open-codes the same nine steps in parallel, the
+single-source-of-truth property is lost even though the code still
+works today. The purpose of this section is to show one such site,
+explain precisely what is wrong with it, and describe the minimal
+change that restores the property.
+
+The site chosen for this walkthrough is inside a layout-conversion
+pass that inserts intermediate buffers between a producer and its
+consumers to change the on-device layout of a value. Whenever the
+pass retargets a consumer to read from a newly-inserted buffer, it
+also has to replace the consumer's computed buffer with a fresh
+object — for exactly the reasons described in section 3. This is the
+same operation the helper exists to perform.
 
 - **File:** `torch_spyre/_inductor/insert_restickify.py`
 - **Permalink to the replacement block:**
@@ -461,31 +490,90 @@ correct here. It is also the kind of step that is easy to leave out
 elsewhere, which is exactly why the helper's docstring names it
 explicitly.
 
-### 6.2 Why this duplication matters
+### 6.2 What is wrong with the open-coded block
 
-The two blocks are semantically equivalent. That is precisely the
-problem. Every invariant that has to hold for a computed-buffer
-replacement to be safe is encoded twice — once in the helper, once in
-this pass. If a tenth invariant is discovered (say, a new metadata
-field on the computed buffer, or a second cached analysis that must
-be invalidated), the helper can be updated in one place, but the
-open-coded site will silently continue doing the previous nine steps
-and quietly diverge.
+The block is not incorrect today. It performs all nine invariants
+plus the graph-index update, in the correct order, using the same
+constructor arguments and the same helper calls as the centralized
+version. Someone reading it in isolation would find nothing to fix.
 
-The failure mode of that divergence is worth stating concretely.
-Because the buffer name is preserved, `name_to_buffer` lookups keep
-resolving. Because `operation_name` is preserved, operation-level
-lookups keep resolving. Because provenance is preserved, debug output
-still names the pass. The graph will look correct in every top-level
-view. The only observable difference will be whatever piece of state
-the new invariant governs — often an analysis that returns a stale
-answer, or a metadata field that a much later pass reads and acts on
-without realizing it came from a stage before the replacement. The
-mutation site will not raise. The failure will surface one or two
-passes downstream, in code that has no obvious connection to the
-retiling pass, layout pass, or dedup pass that produced the drift.
+The problem is not in what the block does. The problem is in what
+the block *is*: a second, independent copy of the computed-buffer
+replacement protocol.
 
-### 6.3 What the minimal repair looks like
+Three specific properties of the current state make that copy a
+liability rather than a stylistic issue.
+
+**It splits ownership of the invariant list.** The helper's contract
+is documented in one place — its docstring names the fields it
+preserves, its comment on lines 1181–1182 names the rule it enforces
+(wrap, never rebuild), and section 5 above names the two caller
+responsibilities it deliberately does not own. The open-coded block
+carries none of that documentation. A reader who arrives at the
+open-coded block first has no way to know that the seven kwargs to
+the constructor, the `operation_name` assignment, the two provenance
+calls, and the cache-clear form a *contract* rather than a
+convenience — that each of them corresponds to a specific downstream
+reader that will misbehave if it is skipped.
+
+**It bypasses the single-place-to-fix property.** The helper exists
+so that a new invariant, once discovered, can be added in one
+function and every call site benefits. The open-coded block breaks
+that property for exactly this call site. If a future change adds a
+new required step — a new metadata field to copy, a second cached
+analysis to invalidate, an additional loop-shape field on the
+`ComputedBuffer` constructor — the helper will be updated but the
+open-coded block will silently continue doing the previous nine
+steps.
+
+**It is not detectable by static means.** A grep for
+`ComputedBuffer(` will find the constructor call, but the fact that
+the surrounding lines are meant to satisfy the same nine-invariant
+contract is not encoded anywhere the compiler or linter can see. The
+two blocks look like independent code. They are, in fact, coupled by
+a contract that lives only in the helper's docstring and in a
+compiler engineer's head.
+
+### 6.3 Why the failure this creates is quiet
+
+Given how many downstream readers depend on computed-buffer state,
+it might seem that a divergence between the two blocks would surface
+loudly — an assertion failure, a wrong-shape error, a
+`KeyError` on a missing lookup. In practice it will not.
+
+Every invariant in the nine-item list is protective in the same
+direction: it prevents *some specific downstream reader* from seeing
+inconsistency. Miss one invariant and one downstream reader
+misbehaves; the other eight downstream readers still see a
+well-formed graph. Concretely, at this call site:
+
+- Buffer name is preserved, so the graph-wide name-to-buffer lookup
+  keeps resolving.
+- Operation name is preserved, so operation-level lookups keep
+  resolving.
+- Layout is preserved, so consumers' addressing arithmetic still
+  matches.
+- Provenance is preserved, so debug output still attributes work to
+  the right pass.
+- The operation-list splice is in place, so topological order still
+  holds.
+
+If the open-coded block drifts by one item — say it stops copying a
+newly-added backend metadata field — none of the checks above will
+fail. The mutation site will not raise. The graph will look correct
+in every top-level view. The only observable difference will be
+whatever piece of state the missed invariant governs, and that
+difference will only surface when some later pass reads that piece
+of state and acts on it. The failure will therefore appear one or
+two passes downstream, in code that has no obvious connection to
+the pass that produced the drift, and its stack trace will point at
+a reader that is behaving correctly given the state it was handed.
+
+This is the failure mode that motivates centralizing the protocol in
+the first place. It is also the failure mode that any duplicate site
+reintroduces.
+
+### 6.4 What the minimal repair looks like
 
 The open-coded block can be replaced by two lines that delegate to the
 helper and then add the one caller-responsibility step:
