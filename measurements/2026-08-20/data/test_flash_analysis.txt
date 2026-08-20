@@ -1,0 +1,84 @@
+  (installed at pid=13707, argv=['/tmp/audit-kit/measurements/2026-08-20/scripts/run_test_flash.py'])
+
+=== totals ===
+  get_read_writes_raw: 7050
+  op_read_writes_memo: 4971
+
+=== per-call time (us) — all kinds combined ===
+  count: 12021
+  min:   0.1
+  p50:   152.7
+  p90:   275.9
+  p99:   413.4
+  max:   161589.9
+  mean:  154.4
+  total: 1855.7 ms
+
+=== per-call time bucket histogram ===
+      <100us: 4768
+   100-500us: 7198
+   500us-1ms: 51
+       1-5ms: 2
+      5-20ms: 0
+      >=20ms: 2
+
+=== cache stats (op_read_writes_memo) ===
+  hits:   4766
+  misses: 205
+  hit rate: 95.9%
+  hit  p50/mean: 0.2/0.2 us
+  miss p50/mean: 252.0/274.2 us
+
+=== top 15 call sites by count ===
+    2460  dedup_constants.py:70  in _redirect_consumers()
+    2431  pass_utils.py:691  in _build_indirect_load_subs()
+    2130  pass_utils.py:980  in iteration_space_from_op()
+    1318  pass_utils.py:1662  in _prepare_per_core_view()
+     410  work_division.py:663  in collect_tensor_deps()
+     354  allocator.py:381  in _is_index_or_indirectly_accessed()
+     213  ir.py:5325  in get_free_symbol_uses()
+     205  pass_utils.py:114  in op_read_writes()
+     205  work_division.py:1626  in span_reduction()
+     205  work_division.py:681  in apply_splits()
+     197  propagate_layouts.py:1515  in _resolve_copy_back_candidates()
+     197  optimize_restickify.py:524  in compute_future_min_cost()
+     197  optimize_restickify.py:573  in _compute_last_use()
+     197  optimize_restickify.py:651  in beam_global_min_cost()
+     189  work_division.py:1648  in work_distribution()
+
+=== top 15 call sites by total elapsed time (ms) ===
+     616.5 ms  ( 2460 calls, avg   250.6 us)  dedup_constants.py:70  in _redirect_consumers()
+     394.8 ms  ( 2431 calls, avg   162.4 us)  pass_utils.py:691  in _build_indirect_load_subs()
+     333.0 ms  (  177 calls, avg  1881.1 us)  ir.py:5362  in get_fill_order()
+      56.2 ms  (  205 calls, avg   274.2 us)  work_division.py:1626  in span_reduction()
+      53.5 ms  (  177 calls, avg   302.2 us)  propagate_layouts.py:1926  in propagate_spyre_tensor_layouts()
+      52.7 ms  (  205 calls, avg   257.1 us)  pass_utils.py:114  in op_read_writes()
+      51.6 ms  (  197 calls, avg   262.1 us)  optimize_restickify.py:524  in compute_future_min_cost()
+      48.5 ms  (  197 calls, avg   246.1 us)  optimize_restickify.py:651  in beam_global_min_cost()
+      43.8 ms  (  197 calls, avg   222.5 us)  propagate_layouts.py:1515  in _resolve_copy_back_candidates()
+      43.7 ms  (  177 calls, avg   247.1 us)  deadcode_elimination.py:45  in live_operations()
+      43.4 ms  (  197 calls, avg   220.3 us)  optimize_restickify.py:573  in _compute_last_use()
+      37.9 ms  (  165 calls, avg   229.5 us)  split_multi_ops.py:725  in validate_ops()
+      34.3 ms  (  213 calls, avg   160.8 us)  ir.py:5325  in get_free_symbol_uses()
+      28.1 ms  (  185 calls, avg   152.1 us)  allocator.py:586  in _op_inputs_good_for_lx_inplace()
+       4.8 ms  (   20 calls, avg   239.4 us)  propagate_layouts.py:1885  in propagate_spyre_tensor_layouts()
+
+=== top 15 ops by re-analysis count (raw calls only) ===
+      54  op24
+      54  op41
+      54  op72
+      54  op92
+      54  op123
+      54  op143
+      54  op174
+      54  op194
+      50  op13
+      50  op25
+      50  op28
+      50  op61
+      50  op73
+      50  op76
+      50  op112
+
+=== summary line for the finding ===
+  raw=7050 memo=4971 (hits=4766) total_time=1855.7ms unique_sites=27
