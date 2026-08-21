@@ -31,7 +31,7 @@ individual dict fields are private.
 486          self.name_to_users: defaultdict[str, list[ir.IRNode]] = defaultdict(list)
 487          self.name_to_op: dict[str, ir.Operation] = {}
 ```
-(`/Users/tdeshane/.cache/uv/archive-v0/5QunQMO7oRZ2I5qNrLSs1/torch/_inductor/graph.py:356-487`)
+(https://github.com/pytorch/pytorch/blob/0d62256a2b23365f8e1604297eb23a6545102aa8/torch/_inductor/graph.py#L356-L487, v2.12.0 fallback)
 
 `V.graph` is the per-thread accessor for the currently-installed
 `GraphLowering`. `torch/_inductor/virtualized.py` describes the pattern
@@ -42,12 +42,12 @@ explicitly:
 ...
 24  2. Per-compilation global state.  Examples: ``V.fake_mode``, ``V.graph``.
 ```
-(`/Users/tdeshane/.cache/uv/archive-v0/5QunQMO7oRZ2I5qNrLSs1/torch/_inductor/virtualized.py:16-24`)
+(https://github.com/pytorch/pytorch/blob/0d62256a2b23365f8e1604297eb23a6545102aa8/torch/_inductor/virtualized.py#L16-L24, v2.12.0 fallback)
 
 ```
 91  threadlocal = local()
 ```
-(`/Users/tdeshane/.cache/uv/archive-v0/5QunQMO7oRZ2I5qNrLSs1/torch/_inductor/virtualized.py:91`)
+(https://github.com/pytorch/pytorch/blob/0d62256a2b23365f8e1604297eb23a6545102aa8/torch/_inductor/virtualized.py#L91, v2.12.0 fallback)
 
 Two consequences follow, and both matter later:
 
@@ -62,14 +62,16 @@ Two consequences follow, and both matter later:
 ## 2. Torch-Spyre reads of `GraphLowering` internals
 
 Every read below goes through `V.graph.<attr>` (per-thread) and treats
-the `GraphLowering` as an authoritative name-directory. All citations
-are into `/tmp/ts-pinned-scan/fea0c4b/`.
+the `GraphLowering` as an authoritative name-directory. Torch-spyre
+citations use the form `torch-spyre@fea0c4b:<path>:<line>` and resolve
+against SHA fea0c4be901e1383b1f700dbad8887128b0fcb27 on
+`github.com/torch-spyre/torch-spyre` (private).
 
 Aggregate: 151 `V.graph.<attr>` reference sites (both reads and writes)
 across the pinned tree.
 
 ```
-$ grep -rn "V\.graph\." /tmp/ts-pinned-scan/fea0c4b/torch_spyre/ | wc -l
+$ grep -rn "V\.graph\." torch_spyre/ | wc -l  # in a torch-spyre checkout at fea0c4b
 151
 ```
 
@@ -218,7 +220,7 @@ Upstream contract for these two entry points:
 ...
 1065          self.name_to_buffer[name] = buffer
 ```
-(`/Users/tdeshane/.cache/uv/archive-v0/5QunQMO7oRZ2I5qNrLSs1/torch/_inductor/graph.py:1053-1082`)
+(https://github.com/pytorch/pytorch/blob/0d62256a2b23365f8e1604297eb23a6545102aa8/torch/_inductor/graph.py#L1053-L1082, v2.12.0 fallback)
 
 ### 3.2 Direct `name_to_buffer` writes (bypass `register_buffer`)
 
@@ -314,7 +316,7 @@ Open Questions.
 35              V.graph.sizevars, SizeVarAllocator
 36          )
 ```
-(`/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/wrapper.py:31-36`)
+(`torch-spyre@fea0c4b:torch_spyre/_inductor/wrapper.py:31-36`)
 
 This is *not* a class-level patch: the bound-method assignment lands on
 the per-`GraphLowering` `SizeVarAllocator` instance, so it does not
@@ -336,7 +338,7 @@ doing so*. See §4.2.
 60  _lowerings_lock = threading.RLock()
 61  _lowerings_nesting = 0
 ```
-(`/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/lowering.py:59-61`)
+(`torch-spyre@fea0c4b:torch_spyre/_inductor/lowering.py:59-61`)
 
 The lock is entered once at the top of `enable_spyre_lowerings()`, held
 across the entire mutation phase (unregister + register + save aten
@@ -380,7 +382,7 @@ overloads), and released *before* the yield. It is re-acquired on
 245              last_exit = (_lowerings_nesting == 0)  # fmt: skip
 246              if last_exit:
 ```
-(`/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/lowering.py:172-246`)
+(`torch-spyre@fea0c4b:torch_spyre/_inductor/lowering.py:172-246`)
 
 Two observations from this text:
 
@@ -417,7 +419,7 @@ performs two additional process-wide mutations, and neither is inside
 162          spyre_data_types(),
 163          enable_spyre_lowerings(),
 ```
-(`/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/patches.py:109-163`)
+(`torch-spyre@fea0c4b:torch_spyre/_inductor/patches.py:109-163`)
 
 The class rebinds happen *before* `enable_spyre_lowerings()` is even
 entered, so `_lowerings_lock` does not protect them at all. Restore
@@ -432,7 +434,7 @@ happens on the `finally` branch:
 175              GraphLowering._update_scheduler = old_update_scheduler  # type: ignore[method-assign]
 176              SchedulerNode.has_side_effects = old_scheduler_node_has_side_effects  # type: ignore[method-assign]
 ```
-(`/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/patches.py:170-176`)
+(`torch-spyre@fea0c4b:torch_spyre/_inductor/patches.py:170-176`)
 
 ### 4.3 What the lock actually protects
 
@@ -454,7 +456,7 @@ The lock does *not* protect:
 - `GraphLowering._update_scheduler` (§4.2) — assigned outside the CM.
 - `SchedulerNode.has_side_effects` (§4.2) — assigned outside the CM.
 - `torch._prims_common._computation_dtype_map` — mutated in
-  `spyre_data_types` (see `/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/patches.py:27-37`).
+  `spyre_data_types` (see `torch-spyre@fea0c4b:torch_spyre/_inductor/patches.py:27-37`).
 - `torch._inductor.fx_passes.joint_graph.pass_patterns` — popped/restored
   in `enable_spyre_context` at lines 105-107 / 173.
 - `torch._inductor.ir.Loops.has_large_inner_fn` — replaced at lines
@@ -472,7 +474,7 @@ a `GraphLowering` mutation, but it is a symmetric case worth flagging:
 `spyre_decompositions` dict with no synchronization.
 
 ```
-$ grep -n "_decompositions_lock" /tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/decompositions.py
+$ grep -n "_decompositions_lock" torch_spyre/_inductor/decompositions.py  # in a torch-spyre checkout at fea0c4b
 70:_decompositions_lock = threading.RLock()
 ```
 
@@ -588,10 +590,9 @@ should schedule:
 ## 6. Open questions
 
 - **Byte-for-byte upstream match.** Line citations for `graph.py` and
-  `virtualized.py` come from the v2.12 cache
-  (`/Users/tdeshane/.cache/uv/archive-v0/5QunQMO7oRZ2I5qNrLSs1/`),
-  because the pinned target is `v2.13.0` and no v2.13 tag is checked
-  out locally. Attribute names (`name_to_buffer`, `name_to_op`,
+  `virtualized.py` come from v2.12.0
+  (SHA `0d62256a2b23365f8e1604297eb23a6545102aa8`), because the pinned
+  target is `v2.13.0` and no v2.13 tag is checked out locally. Attribute names (`name_to_buffer`, `name_to_op`,
   `name_to_users`, `removed_buffers`, `inplaced_to_remove`,
   `graph_inputs`, `graph_outputs`, `sizevars`) match by symbol at v2.13
   main (`c3ebaaba`) as far as identifier grep goes; line numbers

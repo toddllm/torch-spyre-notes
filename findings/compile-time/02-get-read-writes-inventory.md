@@ -367,6 +367,18 @@ Raw JSONL: [`measurements/2026-08-20/data/test_flash.jsonl`](../../measurements/
 (12,022 records).
 Analysis: [`measurements/2026-08-20/data/test_flash_analysis.txt`](../../measurements/2026-08-20/data/test_flash_analysis.txt).
 
+> **v1 data notice.** The numbers in this section come from
+> instrumentation schema v1 (see
+> `measurements/2026-08-20/patches/instrument_read_writes.py` history).
+> Schema v1 double-counts dependency-extraction on the memo-miss path:
+> when `op_read_writes` misses, the raw wrapper's elapsed time is also
+> recorded, so combining raw + memoized totals inflates wall-clock.
+> Re-run with schema v2 via
+> [`needs-pod/06-regenerate-test-flash-v2.sh`](../../needs-pod/06-regenerate-test-flash-v2.sh)
+> before quoting any aggregate. The direct `_redirect_consumers`
+> measurement of **2,460 calls / 616 ms** is a raw call site, not a
+> nested aggregate, and remains valid under both schemas.
+
 Headline numbers from one cold compile:
 
 | Metric                                                | Value              |
@@ -377,7 +389,7 @@ Headline numbers from one cold compile:
 | `op_read_writes` cache hit rate                       | **95.9%** (4,766 / 4,971) |
 | Cache miss cost (p50)                                 | 252 μs             |
 | Cache hit cost (p50)                                  | 0.2 μs             |
-| Total wall-clock inside these two calls               | **1.86 seconds** (of a 90 s compile ≈ **2.1%**) |
+| Combined inclusive time (schema v1; NOT exclusive)    | *v1 inclusive aggregate that double-counts the memo-miss path; retracted — see the v1 data notice above. Re-measure under schema v2 before quoting.* |
 | Per-call cost (all sites) — p50 / p90 / p99 / max     | 152.7 μs / 275.9 μs / 413.4 μs / 161.6 ms |
 | Unique caller sites hit at runtime                    | 27                 |
 | Unique ops re-analyzed (raw calls)                    | ~180 (top 15 each hit 50–54 times) |
@@ -440,11 +452,11 @@ cache hit/miss). No torch-spyre source modification.
 
 **Environment.**
 
-- Pod: `tdeshane-compiler-timing-dev-v2` (node `p1-worker-23`,
-  `a5-deepview` cluster)
+- Host: a Spyre-capable dev host (the dev cluster the pinned run was
+  captured on)
 - torch-spyre HEAD: `fea0c4be901e1383b1f700dbad8887128b0fcb27` (fetched
   and checked out for this audit; `_C.so` rebuilt via `make setup` on
-  the pod)
+  that host)
 - torch: `2.13.0+cpu`
 - Python: 3.12
 - Cold compile — `TORCHINDUCTOR_CACHE_DIR` wiped between runs
@@ -452,8 +464,8 @@ cache hit/miss). No torch-spyre source modification.
 **Reproduce.**
 
 ```bash
-# On the pod:
-cd $HOME/torch-spyre-work/torch-spyre
+# On a Spyre-capable dev host, from the torch-spyre worktree at the
+# pinned SHA (fea0c4be901e1383b1f700dbad8887128b0fcb27):
 source .venv/bin/activate
 export TORCH_SPYRE_INSTRUMENT_LOG=/tmp/audit_test_flash.jsonl
 export TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor_audit_test_flash

@@ -14,10 +14,10 @@ status: draft
 compiler pass uses to obtain the set of reads (`MemoryDep`/`StarDep`) and
 writes an IR op performs. Upstream, it lives on `ComputedBuffer` in
 `torch/_inductor/ir.py`. The pinned Torch-Spyre repo targets
-`v2.13.0`; the closest locally-cached upstream (`v2.12.0`,
-`/Users/tdeshane/.cache/uv/archive-v0/5QunQMO7oRZ2I5qNrLSs1/torch/`)
-matches the shape of the code the pinned scan calls into, and citations
-below use it for the upstream side. OPEN QUESTION: verify byte-for-byte
+`v2.13.0`; the closest available upstream reference is `v2.12.0`
+(SHA `0d62256a2b23365f8e1604297eb23a6545102aa8`), which matches the
+shape of the code the pinned scan calls into, and citations below
+use it for the upstream side. OPEN QUESTION: verify byte-for-byte
 against a checked-out v2.13.0 tag before freezing.
 
 The upstream definition, quoting the pinned-supported layout (torch
@@ -45,7 +45,7 @@ v2.12 fallback):
 4904                    self.data.get_size(),
 4905                )
 ```
-(`/Users/tdeshane/.cache/uv/archive-v0/5QunQMO7oRZ2I5qNrLSs1/torch/_inductor/ir.py:4886-4905`)
+(https://github.com/pytorch/pytorch/blob/0d62256a2b23365f8e1604297eb23a6545102aa8/torch/_inductor/ir.py#L4886-L4905)
 
 `get_store_function()` wires layout + data:
 
@@ -58,7 +58,7 @@ v2.12 fallback):
 4952            assert isinstance(self.data, Pointwise), type(self.data)
 4953            return partial(self.data.store_output, self.name, indexer)
 ```
-(`/Users/tdeshane/.cache/uv/archive-v0/5QunQMO7oRZ2I5qNrLSs1/torch/_inductor/ir.py:4947-4953`)
+(https://github.com/pytorch/pytorch/blob/0d62256a2b23365f8e1604297eb23a6545102aa8/torch/_inductor/ir.py#L4947-L4953)
 
 And `extract_read_writes` re-traces the store function under a fresh
 `RecordLoadStore` ops handler every time:
@@ -73,7 +73,7 @@ And `extract_read_writes` re-traces the store function under a fresh
 680         with V.set_ops_handler(rw):
 681             fn(*args, *hidden_args)
 ```
-(`/Users/tdeshane/.cache/uv/archive-v0/5QunQMO7oRZ2I5qNrLSs1/torch/_inductor/dependencies.py:659-682`)
+(https://github.com/pytorch/pytorch/blob/0d62256a2b23365f8e1604297eb23a6545102aa8/torch/_inductor/dependencies.py#L659-L682)
 
 Two facts follow directly from this shape:
 
@@ -81,7 +81,7 @@ Two facts follow directly from this shape:
   dependency extraction. Torch-Spyre already acknowledges this in the
   memo comment: "`ComputedBuffer.get_read_writes` re-runs sympy
   dependency extraction on every call and is not cached upstream"
-  (`/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/pass_utils.py:105-106`).
+  (`torch-spyre@fea0c4b:torch_spyre/_inductor/pass_utils.py:105-106`).
 - The set of fields that can *change* the result is exactly the set of
   fields read (directly or transitively) inside `get_read_writes` and
   `extract_read_writes`. Section 2 enumerates them.
@@ -116,7 +116,7 @@ both call `self.inner_fn(vars, ...)` — this is the trace that
 1151        loader = self.make_loader()
 1152        return ops.store(output_name or "unnamed", indexer(vars), loader(vars))
 ```
-(`/Users/tdeshane/.cache/uv/archive-v0/5QunQMO7oRZ2I5qNrLSs1/torch/_inductor/ir.py:1145-1152`)
+(https://github.com/pytorch/pytorch/blob/0d62256a2b23365f8e1604297eb23a6545102aa8/torch/_inductor/ir.py#L1145-L1152)
 
 For `Pointwise`, `make_loader()` returns `self.inner_fn` directly
 (ir.py:1127-1132), so any change to `data.inner_fn` — even swapping
@@ -133,7 +133,7 @@ For `Reduction`:
 1312        )
 1313        ops.store_reduction(output_name or "unnamed", indexer(vars), value)
 ```
-(`/Users/tdeshane/.cache/uv/archive-v0/5QunQMO7oRZ2I5qNrLSs1/torch/_inductor/ir.py:1300-1313`)
+(https://github.com/pytorch/pytorch/blob/0d62256a2b23365f8e1604297eb23a6545102aa8/torch/_inductor/ir.py#L1300-L1313)
 
 ### 2.3 `self.data.ranges` and `self.data.reduction_ranges`
 
@@ -149,18 +149,18 @@ reductions) `self.data.get_reduction_size()` as argsizes to
 1021    def get_pointwise_size(self) -> Sequence[Expr]:
 1022        return self.ranges
 ```
-(`/Users/tdeshane/.cache/uv/archive-v0/5QunQMO7oRZ2I5qNrLSs1/torch/_inductor/ir.py:1018-1022`)
+(https://github.com/pytorch/pytorch/blob/0d62256a2b23365f8e1604297eb23a6545102aa8/torch/_inductor/ir.py#L1018-L1022)
 
 ```
 1294    def get_reduction_size(self) -> Sequence[Expr]:
 1295        return self.reduction_ranges
 ```
-(`/Users/tdeshane/.cache/uv/archive-v0/5QunQMO7oRZ2I5qNrLSs1/torch/_inductor/ir.py:1294-1295`)
+(https://github.com/pytorch/pytorch/blob/0d62256a2b23365f8e1604297eb23a6545102aa8/torch/_inductor/ir.py#L1294-L1295)
 
 Those sizes drive `index_vars_squeeze`, which materializes the loop
 variable sets and calls `SqueezeView.squeezer` — a squeezed dim vanishes
 from `dep.var_names` entirely (loop_info's own docstring at
-`/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/loop_info.py:246-260`
+`torch-spyre@fea0c4b:torch_spyre/_inductor/loop_info.py:246-260`
 elaborates on this). So changing `ranges`/`reduction_ranges` is not
 just a "size" change — it can also change *which symbols* appear in
 each dep's `index`.
@@ -195,15 +195,14 @@ output-name argument. Renaming a buffer changes the string in the write
 dep. No torch-spyre pass in the pinned scan renames a `ComputedBuffer`
 in place, but `replace_computed_buffer_body` explicitly *preserves*
 the name via `name=op.get_name()`
-(`/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/pass_utils.py:1334`).
+(`torch-spyre@fea0c4b:torch_spyre/_inductor/pass_utils.py:1334`).
 
 ### 2.7 `Scatter.output_indexer` (Scatter is a Pointwise subclass)
 
 Scatter's `store_output` uses `self.output_indexer(vars)` in place of
 the layout indexer (upstream ir.py:1184-1191). Torch-Spyre does not
-mutate `output_indexer` in the pinned scan (`grep output_indexer
-/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/` yields no in-place
-assignment), but any future pass that did would change the write
+mutate `output_indexer` in the pinned scan (`grep output_indexer` over
+`torch_spyre/_inductor/` at `fea0c4b` yields no in-place assignment), but any future pass that did would change the write
 dep's index expression. Include it in the invalidation contract for
 completeness.
 
@@ -242,7 +241,7 @@ pattern — the canonical "wrap, never rebuild" convention from
   `op.data.inner_fn` to route reads through `NameSwapHandler` after
   restickify insertion; then rebuilds `op` via a fresh `ComputedBuffer`
   constructor. `object.__setattr__(op.data, "inner_fn", new_inner_fn)`
-  (`/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/insert_restickify.py:238`).
+  (`torch-spyre@fea0c4b:torch_spyre/_inductor/insert_restickify.py:238`).
   Immediately followed by `ComputedBuffer.get_default_sizes_body.clear_cache(new_consumer_buffer)`
   (line 264).
 
@@ -250,7 +249,7 @@ pattern — the canonical "wrap, never rebuild" convention from
   a `NameSwapHandler` mapping duplicate constant names to the canonical
   one:
   `object.__setattr__(consumer.data, "inner_fn", _new_inner)`
-  (`/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/dedup_constants.py:48`).
+  (`torch-spyre@fea0c4b:torch_spyre/_inductor/dedup_constants.py:48`).
   Then `ComputedBuffer.get_default_sizes_body.clear_cache(consumer)`
   (line 49) — but the consumer op instance itself is *not* replaced;
   the memoized `op_read_writes` cache from `pass_utils` is *not*
@@ -259,13 +258,13 @@ pattern — the canonical "wrap, never rebuild" convention from
 - `padding._insert_bmm_padding` — wraps reduction's `inner_fn` to
   redirect the `y` load to a padded buffer:
   `object.__setattr__(reduction, "inner_fn", new_inner_fn)`
-  (`/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/padding.py:151`).
+  (`torch-spyre@fea0c4b:torch_spyre/_inductor/padding.py:151`).
   Immediately followed by `replace_computed_buffer_body` (line 154-160).
 
 - `split_multi_ops._replace_original_op_body` — installs a
   `_SplitOpsHandler`+`_IntermediateOpHandler` chain, then calls
   `dataclasses.replace(op.data, inner_fn=new_inner_fn)`
-  (`/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/split_multi_ops.py:678`).
+  (`torch-spyre@fea0c4b:torch_spyre/_inductor/split_multi_ops.py:678`).
   Followed by `replace_computed_buffer_body` (line 682-688). Note this
   site uses `dataclasses.replace` on `op.data`, not
   `object.__setattr__` — so it produces a **new `Loops` object** rather
@@ -277,7 +276,7 @@ pattern — the canonical "wrap, never rebuild" convention from
   `inner_fn` with a `_NameSwapHandler` that rescales indices from
   full-buffer strides to tile-local strides:
   `object.__setattr__(consumer.data, "inner_fn", new_inner_fn)`
-  (`/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/wsr/coarse_tile.py:3146`).
+  (`torch-spyre@fea0c4b:torch_spyre/_inductor/wsr/coarse_tile.py:3146`).
   Followed by `replace_computed_buffer_body` (line 3147-3153) and an
   explicit re-read (line 3168) that consumes the fresh
   `new_op.get_read_writes()`.
@@ -285,12 +284,12 @@ pattern — the canonical "wrap, never rebuild" convention from
 - `wsr/coarse_tile._patch_outside_consumers_to_full_buffer` — same
   pattern for outside consumers redirected to the full-sized buffer:
   `object.__setattr__(consumer.data, "inner_fn", new_inner_fn)`
-  (`/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/wsr/coarse_tile.py:3910`).
+  (`torch-spyre@fea0c4b:torch_spyre/_inductor/wsr/coarse_tile.py:3910`).
 
 - `wsr/coarse_tile._patch_retiled_load_indexes` — installs a
   `_RetileLoadIndexHandler` that scales load-index coefficients:
   `object.__setattr__(op.data, "inner_fn", new_inner_fn)`
-  (`/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/wsr/coarse_tile.py:4290`).
+  (`torch-spyre@fea0c4b:torch_spyre/_inductor/wsr/coarse_tile.py:4290`).
   Followed by `replace_computed_buffer_body` (line 4291-4299).
 
 ### 3.2 `old_loop.data = new_loop` — scratchpad graph editor
@@ -314,7 +313,7 @@ dataclass on this code path):
 278        # The dependency set changed; force the next query to retrace the loop.
 279        invalidate_op_read_writes(old_loop)
 ```
-(`/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/scratchpad/graph_editor.py:269-279`)
+(`torch-spyre@fea0c4b:torch_spyre/_inductor/scratchpad/graph_editor.py:269-279`)
 
 This is currently the **only site** in the pinned scan that calls
 `invalidate_op_read_writes` — every other inner_fn-mutation site relies
@@ -355,7 +354,7 @@ Rather than mutating fields, this helper constructs a brand-new
 1348     operations[op_idx] = new_buf
 1349     return new_buf
 ```
-(`/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/pass_utils.py:1310-1349`)
+(`torch-spyre@fea0c4b:torch_spyre/_inductor/pass_utils.py:1310-1349`)
 
 Called from six sites: `split_multi_ops.py:682`, `padding.py:154`,
 `wsr/coarse_tile.py:3147, 3911, 4291, 3884` (import site). The freshness
@@ -417,7 +416,7 @@ records:
 
 The `WrapperHandler` upstream contract itself (`_default` delegating to
 `self._inner`, with `load` overridable) is
-`/Users/tdeshane/.cache/uv/archive-v0/5QunQMO7oRZ2I5qNrLSs1/torch/_inductor/ops_handler.py:1057-1062`.
+https://github.com/pytorch/pytorch/blob/0d62256a2b23365f8e1604297eb23a6545102aa8/torch/_inductor/ops_handler.py#L1057-L1062.
 
 ## 4. Object identity vs generation — cache-key design tradeoffs
 
@@ -434,7 +433,7 @@ instance-keyed cache on the mutable `Buffer`/`OperationBuffer` base:
 115         op.__dict__["_ts_cached_read_writes"] = rw
 116     return rw
 ```
-(`/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/pass_utils.py:102-116`)
+(`torch-spyre@fea0c4b:torch_spyre/_inductor/pass_utils.py:102-116`)
 
 Invalidation is manual, one call site:
 
@@ -444,7 +443,7 @@ Invalidation is manual, one call site:
 ...
 140     op.__dict__.pop("_ts_cached_read_writes", None)
 ```
-(`/tmp/ts-pinned-scan/fea0c4b/torch_spyre/_inductor/pass_utils.py:130-140`)
+(`torch-spyre@fea0c4b:torch_spyre/_inductor/pass_utils.py:130-140`)
 
 Three axes to consider before any recommendation:
 

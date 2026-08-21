@@ -29,13 +29,13 @@ that claims "upstream does X" is asserting behavior at
   three pinned SHAs above.
 
 **Runtime measurement:**
-- Pod: `tdeshane-compiler-timing-dev-v2` (node `p1-worker-23`) on the
-  `a5-deepview` cluster.
-- torch-spyre worktree: `$HOME/torch-spyre-work/torch-spyre` checked
-  out to `fea0c4be901e1383b1f700dbad8887128b0fcb27` for this audit.
-  `_C.so` rebuilt via `make setup` on the pod against the pod's
-  current SDK; `import torch_spyre._C` and `torch.device("spyre")`
-  both verified working after rebuild.
+- Host: a Spyre-capable dev host (the dev cluster the pinned run was
+  captured on).
+- torch-spyre worktree at the pinned SHA
+  `fea0c4be901e1383b1f700dbad8887128b0fcb27` for this audit.
+  `_C.so` rebuilt via `make setup` on that host against its current
+  SDK; `import torch_spyre._C` and `torch.device("spyre")` both
+  verified working after rebuild.
 - torch: `2.13.0+cpu` (matches declared `torch~=2.13.0`).
 - Python: 3.12.
 - Workload: torch-spyre's own `test_flash` closure at baseline dims
@@ -93,14 +93,25 @@ Three investigations, all static:
   `get_read_writes` site in the whole `test_flash` compile. Status
   `open`, confidence `reproduced`.
 - [`findings/compile-time/02-get-read-writes-inventory.md`](../findings/compile-time/02-get-read-writes-inventory.md)
-  — 101 static call sites; 12,021 runtime calls / 1.86 s in a
-  90 s cold compile; 68 of 101 sites bypass the memoized helper;
-  same op re-analyzed 50–54 times.
+  — 101 static call sites; 12,021 runtime instrumentation events
+  captured (schema v1; 7,050 raw + 4,971 memoized; the two are NOT
+  additive in wall-clock terms). Direct measurement at
+  `dedup_constants._redirect_consumers`: 2,460 calls / 616 ms. 68 of
+  101 sites bypass the memoized helper; same op re-analyzed 50–54
+  times.
 - [`findings/upstream-fragility/01-patches-ledger.md`](../findings/upstream-fragility/01-patches-ledger.md)
-  — 15 upstream overrides in `patches.py`; 11 `still-required`, 3
-  `needs-testing`, 1 `unknown`. Names `_PRESERVE_FLEX_GEMM_GEMM_OP`
-  as a new upstream-main pre-condition that the addmm-fusion swap
-  silently discards.
+  — 16 physical override sites in `patches.py` (17 verdict rows, since
+  the `SchedulerNode.has_side_effects` site splits into two branches
+  L14a and L14b that carry different verdicts). By `kind`: 5 `config`,
+  5 `extension-point`, 7 `mutation` (mutation-side already includes
+  the L14a/L14b split). By `verdict`: 13 `still-required`, 3
+  `needs-testing`, 0 `possibly-obsolete`, 1 `unknown`. Counts are
+  authoritative in the machine-readable ledger block of
+  [`01-patches-ledger.md`](../findings/upstream-fragility/01-patches-ledger.md)
+  (the `<!-- machine-readable-ledger:begin -->`…`:end -->` table) and
+  are cross-checked by `scripts/validate_metadata.py`. Names
+  `_PRESERVE_FLEX_GEMM_GEMM_OP` as a new upstream-main pre-condition
+  that the addmm-fusion swap silently discards.
 
 ## Deferred to a future run
 

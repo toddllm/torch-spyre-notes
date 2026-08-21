@@ -211,10 +211,9 @@ not changed between calls for that op.
 
 Static, this finding is `plausible`. To promote to `reproduced`:
 
-1. On the dev pod (`a5-deepview`, per the memory index), check out
-   torch-spyre at `fea0c4be901e1383b1f700dbad8887128b0fcb27`. Ensure
-   `torch_spyre` is importable in the `.venv` (see
-   `project_torch_spyre_dev_pod_layout` memory entry).
+1. On a Spyre-capable dev host, check out torch-spyre at
+   `fea0c4be901e1383b1f700dbad8887128b0fcb27`. Ensure `torch_spyre`
+   is importable in its `.venv`.
 2. Add a temporary counter around the loop, e.g.:
 
    ```python
@@ -259,10 +258,25 @@ in the whole compile**, by both count and total time:
 |---------------------------------------------------|-------|------------|--------------|
 | `dedup_constants.py:70` in `_redirect_consumers`  | **2,460** | **616.5 ms** | 250 μs |
 
-For context, this single site accounts for **33% of the 1,856 ms
-that the whole compile spends inside `get_read_writes` and
-`op_read_writes` combined** (7,050 raw + 4,971 memoized = 12,021
-total calls). No other site in the compile is close.
+The compile records 7,050 raw + 4,971 memoized = 12,021 total
+instrumentation events across both wrappers.[^v1-nonadditive]
+No other site in the compile is close on the raw-call cost of
+`_redirect_consumers`.
+
+[^v1-nonadditive]: The 7,050 raw and 4,971 memoized *event counts* are
+    facts about the instrumentation, but the two are **NOT additive in
+    wall-clock terms**: on a memo miss, the `op_read_writes` wrapper
+    calls the raw `Operation.get_read_writes` wrapper, so schema-v1
+    instrumentation records the elapsed time twice (once as raw, once
+    as memoized-miss-inclusive). The direct 2,460 calls / 616 ms at
+    `_redirect_consumers` above is a raw call site (never entered via
+    the memo wrapper) and is unaffected. Any *combined* wall-clock
+    aggregate over both wrappers under schema v1 is retracted — see
+    the v1 data notice in
+    [`02-get-read-writes-inventory.md`](02-get-read-writes-inventory.md)
+    and re-run schema v2 via
+    [`needs-pod/06-regenerate-test-flash-v2.sh`](../../needs-pod/06-regenerate-test-flash-v2.sh)
+    before quoting a combined number.
 
 The 2,460 calls come from a modest number of duplicate constants —
 `test_flash` at baseline dims does not stress the pattern

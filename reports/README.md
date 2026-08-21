@@ -28,7 +28,7 @@ interpretable even after all three trees have moved.
 
 ## Environment
 
-- Auditor host / dev pod: <e.g., laptop static, or a5-deepview pod for measurement>
+- Auditor host: <e.g., laptop static, or a Spyre-capable dev host for measurement>
 - Python: <version if a run happened; N/A for static-only reports>
 - Notes: <anything else that affects reproducibility>
 

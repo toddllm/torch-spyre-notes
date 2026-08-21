@@ -17,8 +17,10 @@ from each pass's docstring and body; `?` indicates a value that cannot
 be settled by static inspection alone and is captured in the open
 questions at the bottom.
 
-Pinned commit: `fea0c4be901e1383b1f700dbad8887128b0fcb27` (source under
-`/tmp/ts-pinned-scan/fea0c4b`).
+Pinned commit: `fea0c4be901e1383b1f700dbad8887128b0fcb27`. Torch-spyre
+citations use the form `torch-spyre@fea0c4b:<path>:<line>` and resolve
+against SHA fea0c4be901e1383b1f700dbad8887128b0fcb27 on
+`github.com/torch-spyre/torch-spyre` (private).
 
 ## CustomPreGradPasses  (`passes.py:211`)
 
@@ -154,4 +156,6 @@ much larger portion of the source than fits into an audit turn.
 - Ordered pipeline in `torch_spyre/_inductor/passes.py:444-485`.
 - Wrappers (`_maybe_*`, `_distribute_work`) live at `passes.py:308-412`.
 - Each pass function's own site is cited in the tables above.
-- File paths are relative to `/tmp/ts-pinned-scan/fea0c4b/`.
+- Torch-spyre citations use the form `torch-spyre@fea0c4b:<path>:<line>`
+  and resolve against SHA fea0c4be901e1383b1f700dbad8887128b0fcb27 on
+  `github.com/torch-spyre/torch-spyre` (private).

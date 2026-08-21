@@ -25,6 +25,14 @@ Checks performed:
     the actual number of finding files under
     `findings/<category>/*.md`. If `README.md` makes no such claim,
     this check is skipped (no error).
+8.  Prose count claims (e.g. "N upstream overrides", "N physical
+    override sites", "N verdict rows", "N config overrides",
+    "N mutation sites", "N extension-point") in any .md file under
+    the repo (excluding the patches ledger itself and .git/) match
+    the canonical totals derived from the machine-readable ledger.
+9.  Every `torch-spyre@<SHORT_SHA>:...` shorthand citation uses the
+    exact short SHA declared as `TORCH_SPYRE_SHORT_SHA` below —
+    catches drift when someone re-pins.
 
 Exit status:
     0   no errors, no warnings that promote to error mode
@@ -95,6 +103,65 @@ FRONT_MATTER_LINE_RE = re.compile(
 
 LEDGER_BEGIN = "<!-- machine-readable-ledger:begin -->"
 LEDGER_END = "<!-- machine-readable-ledger:end -->"
+
+# The one-and-only short SHA that torch-spyre citations must use. If a
+# future audit re-pins torch-spyre, bump this value together with the
+# full SHAs recorded in the manifest reports; the validator will then
+# fail any lingering shorthand that still points at the old SHA.
+TORCH_SPYRE_SHORT_SHA = "fea0c4b"
+
+# Short-SHA shorthand of the form `torch-spyre@<hex>:...`. We only flag
+# citations whose hex prefix is *shorter* than a full 40-char SHA — the
+# full form is validated by the manifest cross-check (rule 5).
+TORCH_SPYRE_SHORT_RE = re.compile(
+    r"torch-spyre@(?P<sha>[0-9a-f]{4,39})(?=[:`\s])"
+)
+
+# Prose count claims we cross-check against the ledger's row-derived
+# totals. Each entry pairs a regex (that captures a leading integer `N`)
+# with a callable that, given the parsed ledger totals, returns the
+# expected value for `N`. The regex is deliberately anchored on the
+# phrase alone — we don't try to reject synonyms, we just verify the
+# ones we *do* recognize.
+#
+# The `ledger totals` dict passed to the callables has keys:
+#   physical_rows       — count of rows in the machine-readable table
+#   verdict_rows        — same as physical_rows unless an id ends in
+#                         'a' or 'b' (branch split)
+#   by_kind             — dict of kind → count
+#   by_verdict          — dict of verdict → count
+PROSE_COUNT_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
+    (
+        "upstream overrides",
+        re.compile(r"\b(\d+)\s+upstream\s+overrides?\b", re.IGNORECASE),
+        "physical_rows",
+    ),
+    (
+        "physical override sites",
+        re.compile(r"\b(\d+)\s+physical\s+override\s+sites?\b", re.IGNORECASE),
+        "physical_rows",
+    ),
+    (
+        "verdict rows",
+        re.compile(r"\b(\d+)\s+verdict\s+rows?\b", re.IGNORECASE),
+        "verdict_rows",
+    ),
+    (
+        "config overrides",
+        re.compile(r"\b(\d+)\s+config\s+overrides?\b", re.IGNORECASE),
+        "kind:config",
+    ),
+    (
+        "mutation sites",
+        re.compile(r"\b(\d+)\s+mutation\s+sites?\b", re.IGNORECASE),
+        "kind:mutation",
+    ),
+    (
+        "extension-point",
+        re.compile(r"\b(\d+)\s+extension-points?\b", re.IGNORECASE),
+        "kind:extension-point",
+    ),
+]
 
 # The count claims we recognize in README.md, matching phrases like
 # "findings/correctness (N)" or "N findings under correctness/". We
@@ -342,14 +409,20 @@ def check_finding_front_matter(
 # Ledger row validation and count-cross-check.
 # ---------------------------------------------------------------------------
 
-def check_ledger(ledger_path: Path, repo_root: Path, report: Report) -> None:
+def check_ledger(
+    ledger_path: Path, repo_root: Path, report: Report
+) -> dict[str, object] | None:
+    """Validate the ledger table and return the row-derived canonical totals,
+    or `None` if the table could not be parsed. Callers (rule 8) cross-check
+    prose claims against the returned totals.
+    """
     text = ledger_path.read_text(encoding="utf-8", errors="replace")
     rows, parse_errors = parse_ledger_rows(text)
     rel = ledger_path.relative_to(repo_root)
     for err in parse_errors:
         report.error(f"{rel}: {err}")
     if not rows:
-        return
+        return None
     # Per-row schema.
     seen_ids: set[str] = set()
     for i, row in enumerate(rows, start=1):
@@ -423,6 +496,28 @@ def check_ledger(ledger_path: Path, repo_root: Path, report: Report) -> None:
                     f"is {declared} but row-derived total is {expected}"
                 )
 
+    # Physical vs verdict rows: rows whose id ends with a lowercase 'a' or
+    # 'b' are branch-splits of a single physical override site. Total
+    # `verdict_rows` counts every ledger row; `physical_rows` collapses
+    # each `<base>a` + `<base>b` pair into one physical site.
+    verdict_rows = len(rows)
+    branch_bases: set[str] = set()
+    for row in rows:
+        rid = row.get("id", "")
+        if rid and rid[-1:] in ("a", "b"):
+            branch_bases.add(rid[:-1])
+    # Each unique branch base counts as one physical row; its two branch
+    # rows would otherwise have been counted as two.
+    physical_rows = verdict_rows - len(branch_bases)
+
+    totals: dict[str, object] = {
+        "physical_rows": physical_rows,
+        "verdict_rows": verdict_rows,
+        "by_kind": dict(kind_counts),
+        "by_verdict": dict(verdict_counts),
+    }
+    return totals
+
 
 # ---------------------------------------------------------------------------
 # SHA cross-check.
@@ -485,6 +580,106 @@ def check_readme_counts(
 
 
 # ---------------------------------------------------------------------------
+# Prose-count cross-check (rule 8).
+# ---------------------------------------------------------------------------
+
+def _expected_for(totals: dict[str, object], key: str) -> int | None:
+    """Resolve a prose-pattern key against the ledger totals.
+
+    `key` is either a top-level totals key ("physical_rows",
+    "verdict_rows") or `"kind:<k>"` / `"verdict:<v>"` for a subtotal.
+    Returns None if the totals don't define that key.
+    """
+    if ":" in key:
+        top, sub = key.split(":", 1)
+        bucket = totals.get({"kind": "by_kind", "verdict": "by_verdict"}[top])
+        if isinstance(bucket, dict):
+            val = bucket.get(sub)
+            if isinstance(val, int):
+                return val
+        return None
+    val = totals.get(key)
+    return val if isinstance(val, int) else None
+
+
+def check_prose_counts(
+    md_paths: Iterable[Path],
+    totals: dict[str, object],
+    repo_root: Path,
+    report: Report,
+) -> None:
+    """For every recognized prose count claim in each Markdown file
+    (excluding the ledger itself, checked separately by `check_ledger`),
+    assert the leading integer matches the ledger-derived expected total.
+    Unrecognized phrasings are ignored — this is a check on the claims
+    we *do* recognize, not an exhaustive grep for undeclared claims.
+    """
+    for path in md_paths:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            report.error(
+                f"{path.relative_to(repo_root)}: cannot read for "
+                f"prose-count cross-check: {exc}"
+            )
+            continue
+        rel = path.relative_to(repo_root)
+        for label, pattern, key in PROSE_COUNT_PATTERNS:
+            expected = _expected_for(totals, key)
+            if expected is None:
+                # No ledger baseline for this key — nothing to check
+                # against. (Shouldn't happen with the current key set,
+                # but be defensive if someone widens PROSE_COUNT_PATTERNS
+                # without extending the ledger totals.)
+                continue
+            for m in pattern.finditer(text):
+                declared = int(m.group(1))
+                report.checks_run += 1
+                if declared != expected:
+                    # Compute a line number for the match so the operator
+                    # can jump straight to the mismatch.
+                    line_no = text.count("\n", 0, m.start()) + 1
+                    report.error(
+                        f"{rel}:{line_no}: prose claim "
+                        f"{declared} {label!r} contradicts "
+                        f"ledger-derived total {expected}"
+                    )
+
+
+# ---------------------------------------------------------------------------
+# torch-spyre short-SHA drift check (rule 9).
+# ---------------------------------------------------------------------------
+
+def check_torch_spyre_short_sha(
+    md_paths: Iterable[Path], repo_root: Path, report: Report
+) -> None:
+    """Flag any `torch-spyre@<short>:...` shorthand whose short SHA is
+    not the pinned `TORCH_SPYRE_SHORT_SHA`. Full 40-hex citations are
+    ignored here — rule 5 covers them via the manifest cross-check.
+    """
+    for path in md_paths:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            report.error(
+                f"{path.relative_to(repo_root)}: cannot read for "
+                f"short-SHA check: {exc}"
+            )
+            continue
+        rel = path.relative_to(repo_root)
+        for m in TORCH_SPYRE_SHORT_RE.finditer(text):
+            sha = m.group("sha")
+            report.checks_run += 1
+            if sha != TORCH_SPYRE_SHORT_SHA:
+                line_no = text.count("\n", 0, m.start()) + 1
+                report.error(
+                    f"{rel}:{line_no}: `torch-spyre@{sha}:...` short-SHA "
+                    f"citation does not match pinned "
+                    f"`{TORCH_SPYRE_SHORT_SHA}`"
+                )
+
+
+# ---------------------------------------------------------------------------
 # Entry point.
 # ---------------------------------------------------------------------------
 
@@ -513,6 +708,29 @@ def all_markdown_for_link_check(repo_root: Path) -> list[Path]:
     return out
 
 
+def all_markdown_under_repo(
+    repo_root: Path, exclude: Iterable[Path] = ()
+) -> list[Path]:
+    """Every .md file under `repo_root` except those under `.git/` and
+    any explicit `exclude` paths (matched by resolved absolute path).
+    Used by rules 8 and 9, which scan the whole audit repo for drift.
+    """
+    excluded = {p.resolve() for p in exclude}
+    out: list[Path] = []
+    for path in sorted(repo_root.rglob("*.md")):
+        # Skip anything under a .git directory anywhere in the tree.
+        try:
+            parts = path.relative_to(repo_root).parts
+        except ValueError:
+            continue
+        if any(part == ".git" for part in parts):
+            continue
+        if path.resolve() in excluded:
+            continue
+        out.append(path)
+    return out
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument(
@@ -538,10 +756,11 @@ def main(argv: list[str]) -> int:
     for f in findings:
         check_finding_front_matter(f, repo_root, report)
 
-    # 2. Ledger structure.
+    # 2. Ledger structure — returns canonical totals for rule 8.
     ledger = repo_root / "findings" / "upstream-fragility" / "01-patches-ledger.md"
+    ledger_totals: dict[str, object] | None = None
     if ledger.is_file():
-        check_ledger(ledger, repo_root, report)
+        ledger_totals = check_ledger(ledger, repo_root, report)
 
     # 3. SHA cross-check across findings and README.
     pinned, sha_errs = pinned_shas_from_reports(repo_root / "reports")
@@ -559,6 +778,19 @@ def main(argv: list[str]) -> int:
 
     # 5. README category-count cross-check.
     check_readme_counts(top_readme, repo_root, report)
+
+    # 6. Prose count claims cross-checked against the ledger totals
+    #    (rule 8). Scan every .md under the repo except the ledger
+    #    itself (which is already checked in step 2) and .git/.
+    all_md = all_markdown_under_repo(repo_root, exclude=[ledger])
+    if ledger_totals is not None:
+        check_prose_counts(all_md, ledger_totals, repo_root, report)
+
+    # 7. Short-SHA drift: `torch-spyre@<short>:...` must use the pinned
+    #    short SHA (rule 9). Scan every .md, including the ledger.
+    check_torch_spyre_short_sha(
+        all_markdown_under_repo(repo_root), repo_root, report
+    )
 
     for line in report.errors:
         print(f"ERROR: {line}", file=sys.stderr)

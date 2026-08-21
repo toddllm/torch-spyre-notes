@@ -19,10 +19,15 @@ prose about numbers that live elsewhere.
   `scans/results/pass_dependency_graph.dot`
 - **Dynamic-analysis inputs:**
   [`measurements/2026-08-20/data/test_flash.jsonl`](../measurements/2026-08-20/data/test_flash.jsonl)
-  (12,022 events; a single `test_flash.py` cold compile on the
-  `a5-deepview` dev pod, instrumented via
-  [`measurements/2026-08-20/patches/instrument_read_writes.py`](../measurements/2026-08-20/patches/instrument_read_writes.py)
-  after the Phase 0 exclusive-timing / object-identity rework)
+  — 12,022 events from a single cold compile, instrumentation
+  **SCHEMA v1** (predates the Phase 0 rework; the earlier claim that
+  the JSONL came *after* the Phase 0 exclusive-timing / object-identity
+  rework is retracted — the JSONL predates that rework). Re-run with
+  schema v2 via
+  [`needs-pod/06-regenerate-test-flash-v2.sh`](../needs-pod/06-regenerate-test-flash-v2.sh)
+  when pod time is available; only then will exclusive-time aggregates
+  be sound. Instrumentation patch:
+  [`measurements/2026-08-20/patches/instrument_read_writes.py`](../measurements/2026-08-20/patches/instrument_read_writes.py).
 - **Parent manifest:**
   [`reports/2026-08-20__torch-spyre-fea0c4b__pytorch-c3ebaab.md`](2026-08-20__torch-spyre-fea0c4b__pytorch-c3ebaab.md)
 
@@ -175,8 +180,8 @@ Total findings on-disk under this manifest: **7**.
 
 Every finding in this batch is either static (proven by line-anchored
 reading against the three pinned SHAs) or backed by a single cold
-compile of `test_flash.py` on the `a5-deepview` dev pod. The
-following remain queued for the pod:
+compile of `test_flash.py` on a Spyre-capable dev host. The
+following remain queued for a Spyre-capable dev host:
 
 - [`needs-pod/01-constant-graph-output-repro.sh`](../needs-pod/01-constant-graph-output-repro.sh)
   — adversarial repro of the `dedup_and_promote_constants` guard-vs-drop
