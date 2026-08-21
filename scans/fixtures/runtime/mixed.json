@@ -1,0 +1,109 @@
+{
+  "artifact": "mixed",
+  "description": "Every check fires exactly once. Adjacent restickify pair on buf_x, copy A->B then copy B->C, a cpu fallback, two constants sharing the same hash, a singleton bundle at the end, and an HBM<->LX transfer touching a buffer an LX compute already wrote.",
+  "buffers": {
+    "buf_a":     {"residency": "hbm", "bytes": 4096},
+    "buf_b":     {"residency": "hbm", "bytes": 4096},
+    "buf_c":     {"residency": "hbm", "bytes": 4096},
+    "buf_x":     {"residency": "hbm", "bytes": 4096},
+    "buf_x_stl": {"residency": "hbm", "bytes": 4096},
+    "buf_lx":    {"residency": "lx",  "bytes": 2048},
+    "buf_out":   {"residency": "hbm", "bytes": 4096},
+    "const_alpha": {"residency": "hbm", "bytes": 32},
+    "const_beta":  {"residency": "hbm", "bytes": 32}
+  },
+  "bundles": [
+    {
+      "id": "bundle_main",
+      "ops": [
+        {
+          "id": "op_const_alpha",
+          "kind": "constant",
+          "op_name": "spyre.constant",
+          "reads": [],
+          "writes": ["const_alpha"],
+          "residency": "hbm",
+          "const_hash": "sha256:dupdupdup"
+        },
+        {
+          "id": "op_const_beta",
+          "kind": "constant",
+          "op_name": "spyre.constant",
+          "reads": [],
+          "writes": ["const_beta"],
+          "residency": "hbm",
+          "const_hash": "sha256:dupdupdup"
+        },
+        {
+          "id": "op_restickify_1",
+          "kind": "restickify",
+          "op_name": "spyre.restickify",
+          "reads": ["buf_x"],
+          "writes": ["buf_x_stl"],
+          "residency": "hbm"
+        },
+        {
+          "id": "op_restickify_2",
+          "kind": "restickify",
+          "op_name": "spyre.restickify",
+          "reads": ["buf_x_stl"],
+          "writes": ["buf_x_stl"],
+          "residency": "hbm"
+        },
+        {
+          "id": "op_copy_ab",
+          "kind": "copy",
+          "op_name": "spyre.copy",
+          "reads": ["buf_a"],
+          "writes": ["buf_b"],
+          "residency": "hbm"
+        },
+        {
+          "id": "op_copy_bc",
+          "kind": "copy",
+          "op_name": "spyre.copy",
+          "reads": ["buf_b"],
+          "writes": ["buf_c"],
+          "residency": "hbm"
+        },
+        {
+          "id": "op_lx_compute",
+          "kind": "compute",
+          "op_name": "spyre.softmax",
+          "reads": ["buf_x_stl"],
+          "writes": ["buf_lx"],
+          "residency": "lx"
+        },
+        {
+          "id": "op_lx_to_hbm_copy",
+          "kind": "copy",
+          "op_name": "spyre.copy",
+          "reads": ["buf_lx"],
+          "writes": ["buf_out"],
+          "residency": "hbm"
+        },
+        {
+          "id": "op_topk_cpu",
+          "kind": "fallback",
+          "op_name": "aten::topk_cpu_fallback",
+          "reads": ["buf_out"],
+          "writes": ["buf_out"],
+          "residency": "hbm"
+        }
+      ]
+    },
+    {
+      "id": "bundle_lonely",
+      "ops": [
+        {
+          "id": "op_lone_sqrt",
+          "kind": "compute",
+          "op_name": "spyre.sqrt",
+          "reads": ["buf_c"],
+          "writes": ["buf_c"],
+          "residency": "hbm"
+        }
+      ]
+    }
+  ]
+}

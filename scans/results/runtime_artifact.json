@@ -1,0 +1,105 @@
+{
+  "fixtures": [
+    {
+      "artifact": "clean",
+      "description": "Negative control: a small, well-formed bundle. No checks should fire.",
+      "issues": []
+    },
+    {
+      "artifact": "fragmentation",
+      "description": "Three back-to-back singleton bundles (fragmentation) plus a duplicate-constant pair spread across bundles. No restickify or copy pairs -- singleton_bundle and duplicate_constant fire; nothing else does.",
+      "issues": [
+        {
+          "bundle": "bundle_c1",
+          "detail": "const_hash=sha256:zerozerozero",
+          "kind": "duplicate_constant",
+          "ops": [
+            "op_const_zero_1",
+            "op_const_zero_2"
+          ]
+        },
+        {
+          "bundle": "bundle_s1",
+          "detail": "bundle carries a single op \u2014 one launch per op",
+          "kind": "singleton_bundle",
+          "ops": [
+            "op_add_1"
+          ]
+        },
+        {
+          "bundle": "bundle_s2",
+          "detail": "bundle carries a single op \u2014 one launch per op",
+          "kind": "singleton_bundle",
+          "ops": [
+            "op_mul_1"
+          ]
+        },
+        {
+          "bundle": "bundle_s3",
+          "detail": "bundle carries a single op \u2014 one launch per op",
+          "kind": "singleton_bundle",
+          "ops": [
+            "op_relu_1"
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "mixed",
+      "description": "Every check fires exactly once. Adjacent restickify pair on buf_x, copy A->B then copy B->C, a cpu fallback, two constants sharing the same hash, a singleton bundle at the end, and an HBM<->LX transfer touching a buffer an LX compute already wrote.",
+      "issues": [
+        {
+          "bundle": "bundle_main",
+          "detail": "shared buffer(s): ['buf_x_stl']",
+          "kind": "restickify_restickify_same_buffer",
+          "ops": [
+            "op_restickify_1",
+            "op_restickify_2"
+          ]
+        },
+        {
+          "bundle": "bundle_main",
+          "detail": "copy ['buf_a'] -> ['buf_b'] then copy -> ['buf_c'] (bridge=['buf_b'])",
+          "kind": "chained_copy",
+          "ops": [
+            "op_copy_ab",
+            "op_copy_bc"
+          ]
+        },
+        {
+          "bundle": "bundle_main",
+          "detail": "kind='fallback' op_name='aten::topk_cpu_fallback'",
+          "kind": "cpu_fallback",
+          "ops": [
+            "op_topk_cpu"
+          ]
+        },
+        {
+          "bundle": "bundle_main",
+          "detail": "const_hash=sha256:dupdupdup",
+          "kind": "duplicate_constant",
+          "ops": [
+            "op_const_alpha",
+            "op_const_beta"
+          ]
+        },
+        {
+          "bundle": "bundle_main",
+          "detail": "copy touches ['buf_lx', 'buf_out']; LX-resident intermediate already exists for ['buf_lx']",
+          "kind": "hbm_lx_transfer_with_lx_intermediate",
+          "ops": [
+            "op_lx_to_hbm_copy"
+          ]
+        },
+        {
+          "bundle": "bundle_lonely",
+          "detail": "bundle carries a single op \u2014 one launch per op",
+          "kind": "singleton_bundle",
+          "ops": [
+            "op_lone_sqrt"
+          ]
+        }
+      ]
+    }
+  ]
+}
