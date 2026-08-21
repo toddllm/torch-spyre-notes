@@ -1,8 +1,10 @@
 # Cross-torch-spyre private-API surface inventory
 
+- **Id:** UF-02
 - **Category:** upstream-fragility
+- **Created:** 2026-08-20
 - **Revision manifest:** [reports/2026-08-20__torch-spyre-fea0c4b__pytorch-c3ebaab.md](../../reports/2026-08-20__torch-spyre-fea0c4b__pytorch-c3ebaab.md)
-- **Confidence:** proven (static; counts and locations are the direct output of the Phase 1 `private_api` scanner over the pinned torch-spyre tree, cross-checked against pinned source)
+- **Confidence:** confirmed (static; counts and locations are the direct output of the Phase 1 `private_api` scanner over the pinned torch-spyre tree, cross-checked against pinned source)
 - **Status:** open
 - **Scope:** every torch-spyre `.py` file under `torch_spyre/`, not just `_inductor/patches.py`
 

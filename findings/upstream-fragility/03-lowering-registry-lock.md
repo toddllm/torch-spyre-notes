@@ -1,8 +1,10 @@
 # `enable_spyre_lowerings` — RLock scope and process-global registry mutation
 
+- **Id:** UF-03
 - **Category:** upstream-fragility
+- **Created:** 2026-08-20
 - **Revision manifest:** [reports/2026-08-20__torch-spyre-fea0c4b__pytorch-c3ebaab.md](../../reports/2026-08-20__torch-spyre-fea0c4b__pytorch-c3ebaab.md)
-- **Confidence:** proven-static / needs-pod-dynamic (static reading confirms lock scope and mutation set; the wall-clock cost of holding the lock across a real compile has to be measured on a pod — see [../../needs-pod/04-parallel-compile-metamorphic.py](../../needs-pod/04-parallel-compile-metamorphic.py))
+- **Confidence:** likely (static reading confirms lock scope and mutation set; the wall-clock cost of holding the lock across a real compile has to be measured on a pod — see [../../needs-pod/04-parallel-compile-metamorphic.py](../../needs-pod/04-parallel-compile-metamorphic.py))
 - **Status:** open
 
 ## Summary

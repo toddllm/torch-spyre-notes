@@ -1,8 +1,10 @@
 # Ledger of upstream optimizations suppressed or replaced in `patches.py`
 
+- **Id:** UF-01
 - **Category:** upstream-fragility
+- **Created:** 2026-08-20
 - **Revision manifest:** [reports/2026-08-20__torch-spyre-fea0c4b__pytorch-c3ebaab.md](../../reports/2026-08-20__torch-spyre-fea0c4b__pytorch-c3ebaab.md)
-- **Confidence:** proven (static reading; every claim is line-anchored against fetched sources at the three pinned SHAs)
+- **Confidence:** confirmed (static reading; every claim is line-anchored against fetched sources at the three pinned SHAs)
 - **Status:** open
 
 ## Summary

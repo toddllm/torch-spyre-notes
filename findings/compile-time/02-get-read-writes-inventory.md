@@ -1,8 +1,10 @@
 # `get_read_writes` / `op_read_writes` call-site inventory across torch-spyre
 
+- **Id:** CT-02
 - **Category:** compile-time
+- **Created:** 2026-08-20
 - **Revision manifest:** [reports/2026-08-20__torch-spyre-fea0c4b__pytorch-c3ebaab.md](../../reports/2026-08-20__torch-spyre-fea0c4b__pytorch-c3ebaab.md)
-- **Confidence:** proven (static inventory verified; per-call cost measured on the pod against a real cold compile)
+- **Confidence:** confirmed (static inventory verified against `fea0c4be`; per-call cost measured on the pod against a real cold compile — see `measurements/2026-08-20/data/test_flash.jsonl`)
 - **Status:** open
 
 ## Summary

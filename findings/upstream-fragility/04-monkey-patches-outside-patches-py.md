@@ -1,8 +1,10 @@
 # Process-global monkey-patches outside `patches.py`
 
+- **Id:** UF-04
 - **Category:** upstream-fragility
+- **Created:** 2026-08-20
 - **Revision manifest:** [reports/2026-08-20__torch-spyre-fea0c4b__pytorch-c3ebaab.md](../../reports/2026-08-20__torch-spyre-fea0c4b__pytorch-c3ebaab.md)
-- **Confidence:** proven (static; every entry is a `file:line` on the pinned tree)
+- **Confidence:** confirmed (static; every entry is a `file:line` on the pinned tree)
 - **Status:** open
 
 ## Summary

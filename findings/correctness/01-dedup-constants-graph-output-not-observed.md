@@ -1,6 +1,8 @@
 # `dedup_and_promote_constants` guard-vs-drop misalignment: not observed under lowering paths examined, direct custom-op emission untested
 
+- **Id:** COR-01
 - **Category:** correctness
+- **Created:** 2026-08-20
 - **Revision manifest:** [reports/2026-08-20__torch-spyre-fea0c4b__pytorch-c3ebaab.md](../../reports/2026-08-20__torch-spyre-fea0c4b__pytorch-c3ebaab.md)
 - **Confidence:** plausible
 - **Status:** not-observed
