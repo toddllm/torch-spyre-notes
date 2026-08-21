@@ -1,0 +1,12 @@
+ERROR: findings/compile-time/01-dedup-constants-quadratic-scan.md: front-matter missing required key `id`
+ERROR: findings/compile-time/01-dedup-constants-quadratic-scan.md: front-matter missing required key `created`
+ERROR: findings/compile-time/01-dedup-constants-quadratic-scan.md: confidence 'reproduced' not in ['confirmed', 'likely', 'plausible']
+ERROR: findings/compile-time/02-get-read-writes-inventory.md: front-matter missing required key `id`
+ERROR: findings/compile-time/02-get-read-writes-inventory.md: front-matter missing required key `created`
+ERROR: findings/compile-time/02-get-read-writes-inventory.md: confidence 'proven (static inventory verified; per-call cost measured on the pod against a real cold compile)' not in ['confirmed', 'likely', 'plausible']
+ERROR: findings/correctness/01-dedup-constants-graph-output-not-observed.md: front-matter missing required key `id`
+ERROR: findings/correctness/01-dedup-constants-graph-output-not-observed.md: front-matter missing required key `created`
+ERROR: findings/upstream-fragility/01-patches-ledger.md: front-matter missing required key `id`
+ERROR: findings/upstream-fragility/01-patches-ledger.md: front-matter missing required key `created`
+ERROR: findings/upstream-fragility/01-patches-ledger.md: confidence 'proven (static reading; every claim is line-anchored against fetched sources at the three pinned SHAs)' not in ['confirmed', 'likely', 'plausible']
+validate_metadata: 228 check(s) run, 11 error(s) — FAIL

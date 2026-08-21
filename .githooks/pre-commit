@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Pre-commit hook for torch-spyre-notes.
+#
+# Runs scripts/validate_metadata.py against the repo. If validation
+# fails, the commit is refused; run
+#
+#     python3 scripts/validate_metadata.py
+#
+# to see the errors and fix them, then commit again. To bypass in an
+# emergency, `git commit --no-verify` (but treat that as a smell — the
+# baseline at scripts/validate_metadata.baseline.txt is the *only*
+# accepted class of pre-existing failures, and it is a strictly
+# shrinking list).
+
+set -euo pipefail
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+VALIDATOR="${REPO_ROOT}/scripts/validate_metadata.py"
+
+if [[ ! -x "${VALIDATOR}" ]]; then
+    if [[ ! -f "${VALIDATOR}" ]]; then
+        echo "pre-commit: validator missing at ${VALIDATOR}" >&2
+        exit 1
+    fi
+    # Not marked executable — invoke via python3 anyway.
+    :
+fi
+
+python3 "${VALIDATOR}" --repo "${REPO_ROOT}"
