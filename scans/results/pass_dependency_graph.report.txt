@@ -1,0 +1,7 @@
+cycles: none
+
+unnecessary orderings (transitive 'before' edges):
+  assign_dim_hints -> _maybe_coarse_tile_hints  (coarse tiling reads op.dim_hints written by assign_dim_hints)
+
+flagged duplicates:
+  _maybe_coarse_tile_hints == _maybe_coarse_tile_span_overflow  (both configure coarse tiling but at different layout phases (hint pre-stickify, span-overflow post-stickify). Not a real duplicate; kept as a documented false alarm.)

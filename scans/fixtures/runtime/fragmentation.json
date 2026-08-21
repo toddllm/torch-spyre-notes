@@ -1,0 +1,75 @@
+{
+  "artifact": "fragmentation",
+  "description": "Three back-to-back singleton bundles (fragmentation) plus a duplicate-constant pair spread across bundles. No restickify or copy pairs -- singleton_bundle and duplicate_constant fire; nothing else does.",
+  "buffers": {
+    "buf_a": {"residency": "hbm", "bytes": 4096},
+    "buf_b": {"residency": "hbm", "bytes": 4096},
+    "buf_c": {"residency": "hbm", "bytes": 4096},
+    "const_zero_1": {"residency": "hbm", "bytes": 32},
+    "const_zero_2": {"residency": "hbm", "bytes": 32}
+  },
+  "bundles": [
+    {
+      "id": "bundle_c1",
+      "ops": [
+        {
+          "id": "op_const_zero_1",
+          "kind": "constant",
+          "op_name": "spyre.constant",
+          "reads": [],
+          "writes": ["const_zero_1"],
+          "residency": "hbm",
+          "const_hash": "sha256:zerozerozero"
+        },
+        {
+          "id": "op_const_zero_2",
+          "kind": "constant",
+          "op_name": "spyre.constant",
+          "reads": [],
+          "writes": ["const_zero_2"],
+          "residency": "hbm",
+          "const_hash": "sha256:zerozerozero"
+        }
+      ]
+    },
+    {
+      "id": "bundle_s1",
+      "ops": [
+        {
+          "id": "op_add_1",
+          "kind": "compute",
+          "op_name": "spyre.add",
+          "reads": ["buf_a", "const_zero_1"],
+          "writes": ["buf_b"],
+          "residency": "hbm"
+        }
+      ]
+    },
+    {
+      "id": "bundle_s2",
+      "ops": [
+        {
+          "id": "op_mul_1",
+          "kind": "compute",
+          "op_name": "spyre.mul",
+          "reads": ["buf_b"],
+          "writes": ["buf_c"],
+          "residency": "hbm"
+        }
+      ]
+    },
+    {
+      "id": "bundle_s3",
+      "ops": [
+        {
+          "id": "op_relu_1",
+          "kind": "compute",
+          "op_name": "spyre.relu",
+          "reads": ["buf_c"],
+          "writes": ["buf_c"],
+          "residency": "hbm"
+        }
+      ]
+    }
+  ]
+}

@@ -78,11 +78,14 @@ Three investigations, all static:
 
 ## Findings produced
 
-- [`findings/correctness/01-dedup-constants-graph-output-not-a-bug.md`](../findings/correctness/01-dedup-constants-graph-output-not-a-bug.md)
+- [`findings/correctness/01-dedup-constants-graph-output-not-observed.md`](../findings/correctness/01-dedup-constants-graph-output-not-observed.md)
   — `_redirect_consumers` guard vs `_drop_constant` misalignment is
-  unreachable; proved by enumerating every `SpyreConstantFallback`
-  construction site. Filed `not-a-bug` with a suggested defensive
-  assertion.
+  not observed under the lowering paths examined, but the prior
+  "impossibility proof" rested on a false premise (that
+  `torch.ops.spyre.constant` is unreachable from user code — the op
+  is a public `torch.library.custom_op`). Status downgraded to
+  `not-observed`; adversarial repro candidate documented in
+  [`needs-pod/01-constant-graph-output-repro.sh`](../needs-pod/01-constant-graph-output-repro.sh).
 - [`findings/compile-time/01-dedup-constants-quadratic-scan.md`](../findings/compile-time/01-dedup-constants-quadratic-scan.md)
   — `_redirect_consumers` scans `graph.operations` per duplicate
   constant and calls raw `get_read_writes()` on every op it visits;

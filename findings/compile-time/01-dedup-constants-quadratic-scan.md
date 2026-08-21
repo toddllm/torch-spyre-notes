@@ -1,8 +1,10 @@
 # `dedup_and_promote_constants` performs O(D·N) full-operations scans with un-memoized `get_read_writes`
 
+- **Id:** CT-01
 - **Category:** compile-time
+- **Created:** 2026-08-20
 - **Revision manifest:** [reports/2026-08-20__torch-spyre-fea0c4b__pytorch-c3ebaab.md](../../reports/2026-08-20__torch-spyre-fea0c4b__pytorch-c3ebaab.md)
-- **Confidence:** reproduced
+- **Confidence:** confirmed (reproduced against `test_flash.jsonl`; 2,460 calls / 616.5 ms measured at `dedup_constants.py:70` `_redirect_consumers`)
 - **Status:** open
 
 ## Summary

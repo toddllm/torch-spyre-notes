@@ -1,10 +1,27 @@
-  (installed at pid=13707, argv=['/tmp/audit-kit/measurements/2026-08-20/scripts/run_test_flash.py'])
+LEGACY DATA — instrumentation predates exclusive-timing fix; totals shown are inclusive.
+  (This JSONL, /Users/tdeshane/toddllm/torch-spyre-notes/measurements/2026-08-20/data/test_flash.jsonl,
+   was produced by the pre-fix instrument_read_writes.py. Records use schema_version=1
+   with legacy kinds 'get_read_writes_raw' and 'op_read_writes_memo'; there is no
+   per-miss inner-raw attribution, so exclusive time cannot be recovered from these
+   records — a re-run of the harness with the current instrument_read_writes.py is
+   required to produce v2 records and exclusive numbers.)
+
+  (installed at pid=13707, argv=['/tmp/audit-kit/measurements/2026-08-20/scripts/run_test_flash.py'], schema_version=1)
+
+!!! LEGACY DATA — instrumentation predates exclusive-timing fix; totals shown are INCLUSIVE (raw work inside op_read_writes misses is counted twice). Re-run instrumentation to obtain exclusive numbers. !!!
 
 === totals ===
   get_read_writes_raw: 7050
   op_read_writes_memo: 4971
 
-=== per-call time (us) — all kinds combined ===
+=== time totals (LEGACY: inclusive only) ===
+               get_read_writes_raw:     1798.3 ms  (7050 calls)
+         op_read_writes_memo (hit):        1.1 ms  (4766 calls)
+        op_read_writes_memo (miss):       56.2 ms  (205 calls)
+                   inclusive TOTAL:     1855.7 ms
+  (exclusive total not available: legacy schema has no per-miss inner-raw attribution.)
+
+=== per-call time (us) — all records, INCLUSIVE ===
   count: 12021
   min:   0.1
   p50:   152.7
@@ -22,12 +39,12 @@
       5-20ms: 0
       >=20ms: 2
 
-=== cache stats (op_read_writes_memo) ===
+=== cache stats (op_read_writes wrapper) ===
   hits:   4766
   misses: 205
   hit rate: 95.9%
   hit  p50/mean: 0.2/0.2 us
-  miss p50/mean: 252.0/274.2 us
+  miss p50/mean (INCLUSIVE): 252.0/274.2 us
 
 === top 15 call sites by count ===
     2460  dedup_constants.py:70  in _redirect_consumers()
@@ -46,7 +63,7 @@
      197  optimize_restickify.py:651  in beam_global_min_cost()
      189  work_division.py:1648  in work_distribution()
 
-=== top 15 call sites by total elapsed time (ms) ===
+=== top 15 call sites by total inclusive elapsed time (ms) ===
      616.5 ms  ( 2460 calls, avg   250.6 us)  dedup_constants.py:70  in _redirect_consumers()
      394.8 ms  ( 2431 calls, avg   162.4 us)  pass_utils.py:691  in _build_indirect_load_subs()
      333.0 ms  (  177 calls, avg  1881.1 us)  ir.py:5362  in get_fill_order()
@@ -64,21 +81,21 @@
        4.8 ms  (   20 calls, avg   239.4 us)  propagate_layouts.py:1885  in propagate_spyre_tensor_layouts()
 
 === top 15 ops by re-analysis count (raw calls only) ===
-      54  op24
-      54  op41
-      54  op72
-      54  op92
-      54  op123
-      54  op143
-      54  op174
-      54  op194
-      50  op13
-      50  op25
-      50  op28
-      50  op61
-      50  op73
-      50  op76
-      50  op112
+      54  op24   (pyid=<legacy>)
+      54  op41   (pyid=<legacy>)
+      54  op72   (pyid=<legacy>)
+      54  op92   (pyid=<legacy>)
+      54  op123   (pyid=<legacy>)
+      54  op143   (pyid=<legacy>)
+      54  op174   (pyid=<legacy>)
+      54  op194   (pyid=<legacy>)
+      50  op13   (pyid=<legacy>)
+      50  op25   (pyid=<legacy>)
+      50  op28   (pyid=<legacy>)
+      50  op61   (pyid=<legacy>)
+      50  op73   (pyid=<legacy>)
+      50  op76   (pyid=<legacy>)
+      50  op112   (pyid=<legacy>)
 
 === summary line for the finding ===
-  raw=7050 memo=4971 (hits=4766) total_time=1855.7ms unique_sites=27
+  [LEGACY/inclusive] raw=7050 memo=4971 (hits=4766) inclusive_total=1855.7ms unique_sites=27

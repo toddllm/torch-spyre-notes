@@ -1,0 +1,50 @@
+{
+  "artifact": "clean",
+  "description": "Negative control: a small, well-formed bundle. No checks should fire.",
+  "buffers": {
+    "buf_in": {"residency": "hbm", "bytes": 4096},
+    "buf_mid": {"residency": "lx", "bytes": 2048},
+    "buf_out": {"residency": "hbm", "bytes": 4096},
+    "const_k": {"residency": "hbm", "bytes": 32}
+  },
+  "bundles": [
+    {
+      "id": "bundle_0",
+      "ops": [
+        {
+          "id": "op_const_k",
+          "kind": "constant",
+          "op_name": "spyre.constant",
+          "reads": [],
+          "writes": ["const_k"],
+          "residency": "hbm",
+          "const_hash": "sha256:aaa"
+        },
+        {
+          "id": "op_restickify_in",
+          "kind": "restickify",
+          "op_name": "spyre.restickify",
+          "reads": ["buf_in"],
+          "writes": ["buf_in_stl"],
+          "residency": "hbm"
+        },
+        {
+          "id": "op_matmul",
+          "kind": "compute",
+          "op_name": "spyre.batch_matmul",
+          "reads": ["buf_in_stl", "const_k"],
+          "writes": ["buf_mid"],
+          "residency": "lx"
+        },
+        {
+          "id": "op_softmax",
+          "kind": "compute",
+          "op_name": "spyre.softmax",
+          "reads": ["buf_mid"],
+          "writes": ["buf_out"],
+          "residency": "hbm"
+        }
+      ]
+    }
+  ]
+}

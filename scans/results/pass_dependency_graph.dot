@@ -1,0 +1,87 @@
+digraph pre_scheduling_passes {
+  rankdir=TB;
+  node [shape=box, fontname="Helvetica", fontsize=10];
+  edge [fontname="Helvetica", fontsize=8];
+  subgraph cluster_CustomPrePasses {
+    label="CustomPrePasses";
+    style=rounded; color="#888";
+    "collect_spyre_hints";
+  }
+  subgraph cluster_CustomPostPasses {
+    label="CustomPostPasses";
+    style=rounded; color="#888";
+    "decompose_addmm";
+    "mm_to_bmm_pass.apply";
+    "mark_direct_unit_bmm_pass";
+    "bmm_unflatten_pass.apply";
+  }
+  subgraph cluster_CustomPreSchedulingPasses {
+    label="CustomPreSchedulingPasses";
+    style=rounded; color="#888";
+    "deadcode_elimination";
+    "propagate_named_dims";
+    "validate_named_dims";
+    "assign_dim_hints";
+    "_maybe_reorder_unhinted_interlopers";
+    "_maybe_coarse_tile_hints";
+    "split_multi_ops";
+    "propagate_spyre_tensor_layouts";
+    "validate_ops";
+    "optimize_restickify_locations";
+    "finalize_layouts";
+    "insert_restickify";
+    "enforce_indirect_access_layout";
+    "insert_post_mutation_restickify";
+    "insert_bmm_padding";
+    "dedup_and_promote_constants";
+    "_maybe_coarse_tile_span_overflow";
+    "span_reduction";
+    "_distribute_work";
+    "_maybe_scratchpad_planning";
+  }
+  subgraph cluster_CustomPreFusionPasses {
+    label="CustomPreFusionPasses";
+    style=rounded; color="#888";
+    "propagate_mutation_layouts";
+    "align_lx_producer_loop_order";
+    "build_loop_scheduler_nodes";
+  }
+  subgraph cluster_CustomPostFusionPasses {
+    label="CustomPostFusionPasses";
+    style=rounded; color="#888";
+    "demote_incoherent_lx_buffers";
+    "spyre_fuse_nodes";
+    "hbm_pool_planning";
+  }
+  "decompose_addmm" -> "mm_to_bmm_pass.apply" [color="#334", label="", tooltip="mm_to_bmm rewrites the aten.mm that decompose_addmm exposes"];
+  "mm_to_bmm_pass.apply" -> "mark_direct_unit_bmm_pass" [color="#334", label="", tooltip="mark_direct_unit_bmm marks the bmm produced by mm_to_bmm"];
+  "mark_direct_unit_bmm_pass" -> "bmm_unflatten_pass.apply" [color="#334", label="", tooltip="unflatten pass consumes the marked bmm nodes"];
+  "propagate_named_dims" -> "validate_named_dims" [color="#334", label="", tooltip="validate reads op._dim_prop_info (set by propagate)"];
+  "propagate_named_dims" -> "assign_dim_hints" [color="#334", label="", tooltip="assign consumes op._dim_prop_info and _named_dims"];
+  "assign_dim_hints" -> "_maybe_reorder_unhinted_interlopers" [color="#334", label="", tooltip="reorder reads op.dim_hints written by assign_dim_hints"];
+  "assign_dim_hints" -> "_maybe_coarse_tile_hints" [color="#334", label="", tooltip="coarse tiling reads op.dim_hints written by assign_dim_hints"];
+  "propagate_named_dims" -> "assign_dim_hints" [color="#c22", style=dashed, label="invalidates", tooltip="assign_dim_hints DELETES op._dim_prop_info in its finally block (matrix row 4 Mutates); propagate must run BEFORE assign, never after"];
+  "_maybe_reorder_unhinted_interlopers" -> "_maybe_coarse_tile_hints" [color="#334", label="", tooltip="hint groups depend on runs being contiguous after reorder"];
+  "_maybe_coarse_tile_hints" -> "split_multi_ops" [color="#334", label="", tooltip="matrix places coarse_tile_hints as last pre-stickify WSR pass"];
+  "split_multi_ops" -> "propagate_spyre_tensor_layouts" [color="#334", label="", tooltip="propagate_spyre_tensor_layouts requires the intermediate ComputedBuffers split_multi_ops creates"];
+  "propagate_spyre_tensor_layouts" -> "validate_ops" [color="#334", label="", tooltip="validate_ops docstring: 'must be run after propagate_spyre_tensor_layouts'"];
+  "propagate_spyre_tensor_layouts" -> "optimize_restickify_locations" [color="#334", label="", tooltip="optimizer reads op.layouts and op.restick_cost_fn set by propagate_layouts"];
+  "optimize_restickify_locations" -> "finalize_layouts" [color="#334", label="", tooltip="finalize consumes op.committed_stl written by optimizer"];
+  "finalize_layouts" -> "insert_restickify" [color="#334", label="", tooltip="insert_restickify consumes graph.restickify_plan built by finalize"];
+  "optimize_restickify_locations" -> "finalize_layouts" [color="#c22", style=dashed, label="invalidates", tooltip="finalize DELETES op.layouts, op.restick_cost_fn, op.committed_stl -- optimizer must run BEFORE finalize"];
+  "insert_restickify" -> "enforce_indirect_access_layout" [color="#334", label="", tooltip="enforce docstring: 'runs after insert_restickify: every op's layout is a committed FixedTiledLayout'"];
+  "insert_restickify" -> "insert_post_mutation_restickify" [color="#334", label="", tooltip="post_mutation restickify needs the base restickify plan already applied"];
+  "insert_post_mutation_restickify" -> "insert_bmm_padding" [color="#334", label="", tooltip="matrix ordering; padding runs after mutation restickify"];
+  "insert_bmm_padding" -> "dedup_and_promote_constants" [color="#334", label="", tooltip="padding creates constants; dedup folds them (matrix note on padding row)"];
+  "dedup_and_promote_constants" -> "_maybe_coarse_tile_span_overflow" [color="#334", label="", tooltip="span-overflow needs FixedTiledLayout on every op, which is guaranteed only after all stickify passes"];
+  "_maybe_coarse_tile_span_overflow" -> "span_reduction" [color="#334", label="", tooltip="matrix ordering; work_division reads final layouts and per-op loop info"];
+  "span_reduction" -> "_distribute_work" [color="#334", label="", tooltip="cost_model_matmul_division and work_distribution consume op.op_it_space_splits set by span_reduction"];
+  "_distribute_work" -> "_maybe_scratchpad_planning" [color="#334", label="", tooltip="LX planning depends on final divisions to size intermediates"];
+  "align_lx_producer_loop_order" -> "build_loop_scheduler_nodes" [color="#334", label="", tooltip="align must see plain SchedulerNodes; build_loop_scheduler_nodes wraps them into CountedLoopSchedulerNode"];
+  "propagate_mutation_layouts" -> "align_lx_producer_loop_order" [color="#334", label="", tooltip="align reads final layouts; mutation layouts must be resolved first"];
+  "demote_incoherent_lx_buffers" -> "spyre_fuse_nodes" [color="#334", label="", tooltip="fuse groups nodes into bundles after demotion so demoted buffers become bundle-scoped intermediates"];
+  "spyre_fuse_nodes" -> "hbm_pool_planning" [color="#334", label="", tooltip="hbm_pool_planning docstring: 'runs after spyre_fuse_nodes so nodes is the final, post-fusion top-level list'"];
+  "_maybe_scratchpad_planning" -> "hbm_pool_planning" [color="#334", label="", tooltip="hbm_pool_planning docstring: 'a buffer is only an hbm_pool candidate if LX planning did not already claim it'"];
+  "collect_spyre_hints" -> "propagate_named_dims" [color="#334", label="", tooltip="spyre_hint metadata collected on FX nodes is consumed by propagate_named_dims through the operations' FX origins"];
+  "_maybe_coarse_tile_hints" -> "_maybe_coarse_tile_span_overflow" [color="#a80", style=dotted, label="duplicates", tooltip="both configure coarse tiling but at different layout phases (hint pre-stickify, span-overflow post-stickify). Not a real duplicate; kept as a documented false alarm."];
+}

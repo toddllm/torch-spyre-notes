@@ -1,32 +1,41 @@
 # Ledger of upstream optimizations suppressed or replaced in `patches.py`
 
+- **Id:** UF-01
 - **Category:** upstream-fragility
+- **Created:** 2026-08-20
 - **Revision manifest:** [reports/2026-08-20__torch-spyre-fea0c4b__pytorch-c3ebaab.md](../../reports/2026-08-20__torch-spyre-fea0c4b__pytorch-c3ebaab.md)
-- **Confidence:** proven (static reading; every claim is line-anchored against fetched sources at the three pinned SHAs)
+- **Confidence:** confirmed (static reading; every claim is line-anchored against fetched sources at the three pinned SHAs)
 - **Status:** open
 
 ## Summary
 
 `torch_spyre/_inductor/patches.py` mutates upstream Inductor state in
-**fifteen** distinct places when the Spyre compilation context is
-entered. The mutations fall into four categories:
+**sixteen** distinct places when the Spyre compilation context is
+entered (one physical site per row of the human-readable ledger
+below; the `SchedulerNode.has_side_effects` row (L14) is one physical
+site with two independent branches — L14a and L14b — that carry
+different verdicts, so the machine-readable ledger has **17 verdict
+rows**). The mutations fall into three `kind`s (the `mutation |
+config | extension-point` axis the validator checks against — see
+the "Machine-readable ledger" table further down):
 
-| Category                          | Count |
-|-----------------------------------|-------|
-| Inductor config-flag overrides    | 8     |
-| Class-method monkey-patches       | 4     |
-| Positional pass-list surgery      | 2     |
-| Registry-entry mutation           | 1     |
+| Kind (validator axis) | Count | What it is                                                                                                     |
+|-----------------------|-------|----------------------------------------------------------------------------------------------------------------|
+| `config`              | 5     | Config-flag overrides that flip an upstream default (rows L1, L2, L8, L9, L10).                                |
+| `extension-point`     | 5     | Config-flag "install" slots that upstream deliberately exposes for a Spyre-authored pass (rows L3–L7).         |
+| `mutation`            | 7     | Class-method monkey-patches (L11, L13, L14a, L14b, L16) + positional pass-list surgery (L12, L15). L15 also mutates a `PatternMatcherPass` registry entry (`extra_check` swap) at the same site. |
 
-Six of the eight config overrides simply flip an upstream default
-that is unchanged between torch-spyre's supported baseline
+The five pure config overrides simply flip an upstream default that
+is unchanged between torch-spyre's supported baseline
 (`v2.13.0` @ `cf30153c4c131c8164ee7798e5022d810682e2cb`) and current
 pytorch main (`c3ebaabaf8fe1d1bf25475e86fddafbcbd339e62`) — they are
-`still-required` opinion overrides, not obsolete workarounds. Two
-(`pre_grad_custom_pass`, the `_pre_/_post_fusion_custom_pass` slots)
-install Spyre-authored passes into slots upstream deliberately
-exposes; those are `still-required` and are not really "suppressions"
-in the same sense.
+`still-required` opinion overrides, not obsolete workarounds. The
+five `extension-point` slots (`pre_grad_custom_pass`,
+`post_grad_custom_pre_pass`, `post_grad_custom_post_pass`,
+`_pre_fusion_custom_pass`, `_post_fusion_custom_pass`) install
+Spyre-authored passes into slots upstream deliberately exposes;
+those are `still-required` and are not "suppressions" in the same
+sense.
 
 The three positional / method-signature couplings —
 `joint_graph.pass_patterns.pop()`, `post_grad.pass_patterns[2]`, and
@@ -44,18 +53,20 @@ The `SchedulerNode.has_side_effects` override references
 scheduled for removal. Removal upstream would silently break the
 Spyre override.
 
-Verdict headline:
+Verdict headline (one row per physical override site; row L14 has
+two branches with distinct verdicts, so it appears twice below and
+the totals sum to 17):
 
-| Verdict            | Count | Overrides |
-|--------------------|-------|-----------|
-| `still-required`   | 11    | 8 config flags + `Loops.has_large_inner_fn` + `GraphLowering._update_scheduler` (Spyre-specific pre-scheduling hook) + `GraphTransformObserver.apply_graph_pass` (Spyre metadata plumbing) |
-| `needs-testing`    | 3     | `joint_graph.pass_patterns.pop()`, `post_grad.pass_patterns[2]` walk, `SchedulerNode.has_side_effects` |
-| `possibly-obsolete`| 0     | — |
-| `unknown`          | 1     | The `MutationLayoutSHOULDREMOVE`-branch of `SchedulerNode.has_side_effects` — needs a runnable test to prove either that the scheduler still drops such buffers on main, or that upstream renamed/retired the class |
+| Verdict            | Count | Overrides                                                                                                                                                                             |
+|--------------------|-------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `still-required`   | 13    | 5 config-flag overrides (L1, L2, L8, L9, L10) + 5 extension-point installs (L3–L7) + `Loops.has_large_inner_fn` (L11) + `GraphLowering._update_scheduler` (L13) + `GraphTransformObserver.apply_graph_pass` (L16). |
+| `needs-testing`    | 3     | `joint_graph.pass_patterns.pop()` (L12), `SchedulerNode.has_side_effects` branch (a) (L14a), `post_grad.pass_patterns[2]` walk (L15).                                                  |
+| `possibly-obsolete`| 0     | —                                                                                                                                                                                     |
+| `unknown`          | 1     | `SchedulerNode.has_side_effects` branch (b) — the `MutationLayoutSHOULDREMOVE` branch (L14b) — needs a runtime probe to confirm the branch still fires on main.                        |
 
-(Total 15; the `SchedulerNode.has_side_effects` override is counted
-once in the table but contributes to both `needs-testing` and
-`unknown` because its two branches have different failure modes.)
+Counts above are derived from the "Machine-readable ledger" table
+lower in this file. `scripts/validate_metadata.py` reads that table
+and cross-checks these headline totals against the row-by-row data.
 
 ## Files and symbols
 
@@ -91,9 +102,60 @@ line what it is at HEAD (from `gh api graphql` blame on
 | 15 | `post_grad.pass_patterns[2].patterns.values()` walk that swaps `extra_check` to `lambda x: False` (L186–L199) | positional pass surgery + registry mutation | `torch._inductor.fx_passes.post_grad.pass_patterns[2]` and `torch._inductor.fx_passes.post_grad.is_valid_addmm_fusion` (v2.13 L1776; main L1999) | `1bd17cc9153f` (Spyre hint improvements, 2026-07-24) | L182–L183 comment: "disable addmm fusion. The fusion will be undone by the decomposition that is registered in torch-spyre, but the hints are lost in the process." | needs-testing   | `pass_patterns` is a 3-element list at both baselines (v2.13 L85; main L86). `is_valid_addmm_fusion` is registered as `extra_check` on the two addmm patterns that live in `pass_patterns[2]` (v2.13 L1808/L1818; main L2037/L2047). Position `[2]` and the identity of the sentinel function are stable v2.13 → main. **Fragility 1:** on main, `is_valid_addmm_fusion` gained a new early return (`_PRESERVE_FLEX_GEMM_GEMM_OP` guard, main L2000–L2004) — Spyre's `lambda x: False` replacement discards that guard silently. Since the replacement is always-False the semantic is preserved (both would refuse the fusion), but a future guard change that flips to *permitting* the fusion in some case would be silently overridden by Spyre. **Fragility 2:** the assertion `addmm_fusion_found` protects the position invariant but only detects the case where the sentinel object comparison fails — it does not detect a case where upstream *adds a second addmm-style extra_check* whose object identity is different. |
 | 16 | `GraphTransformObserver.apply_graph_pass = <wrapped>` (L218)         | monkey-patch          | `torch.fx.passes.graph_transform_observer.GraphTransformObserver.apply_graph_pass` (v2.13 L92; main L92) | `1bd17cc9153f`                                  | Wrapper populates `gm.meta[OBSERVER_HOOKS_KEY]` with the current `passname`/`subsystem` so downstream Spyre passes can see which upstream pass invoked them. Not documented inline. | still-required  | `apply_graph_pass(self, pass_fn)` signature identical v2.13 → main. The wrapper preserves the return value and cleans up on exit. The only v2.13→main diff in that file is `trace.provenance_tracking_level` → `effective_provenance_tracking_level()` (line 48), which is inside `__init__` and does not affect `apply_graph_pass`. Note: `patch_inductor_fusions` is called at module import (permanent monkey-patch) rather than scoped to a CM — a distinct fragility from the CM-scoped patches above. |
 
-Row count above is 16 because the `SchedulerNode.has_side_effects`
-row splits internally into two branches. Physical override sites in
-`patches.py` are 15 as summarized in the header table.
+Row count above is 16 (one per physical override site). The
+`SchedulerNode.has_side_effects` row (L14) has two independent
+branches with different verdicts and both are broken out in the
+verdict headline (as L14a and L14b) and in the machine-readable
+ledger below.
+
+### Machine-readable ledger
+
+The table below is the source of truth for the counts in the
+"Summary" section. `scripts/validate_metadata.py` parses this table
+and asserts that (a) every row has the required columns, (b) the
+`kind` column is drawn from `{mutation, config, extension-point}`,
+(c) the `verdict` column is drawn from
+`{still-required, needs-testing, possibly-obsolete, unknown}`, and
+(d) the headline counts match the row-by-row totals derived here.
+Row `id` uses the `L<n>` scheme from the human-readable table above;
+L14 appears twice (L14a and L14b) to carry the two branch verdicts
+independently.
+
+<!-- machine-readable-ledger:begin -->
+
+| id  | kind             | target                                                                                          | evidence-link                                                                                                                                                        | verdict            |
+|-----|------------------|-------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------|
+| L1  | config           | `torch._inductor.config.split_reductions`                                                       | [patches.py#L82](https://github.com/torch-spyre/torch-spyre/blob/fea0c4be901e1383b1f700dbad8887128b0fcb27/torch_spyre/_inductor/patches.py#L82)                       | still-required     |
+| L2  | config           | `torch._inductor.config.benchmark_harness`                                                      | [patches.py#L83](https://github.com/torch-spyre/torch-spyre/blob/fea0c4be901e1383b1f700dbad8887128b0fcb27/torch_spyre/_inductor/patches.py#L83)                       | still-required     |
+| L3  | extension-point  | `torch._inductor.config.pre_grad_custom_pass`                                                   | [patches.py#L84](https://github.com/torch-spyre/torch-spyre/blob/fea0c4be901e1383b1f700dbad8887128b0fcb27/torch_spyre/_inductor/patches.py#L84)                       | still-required     |
+| L4  | extension-point  | `torch._inductor.config.post_grad_custom_pre_pass`                                              | [patches.py#L85](https://github.com/torch-spyre/torch-spyre/blob/fea0c4be901e1383b1f700dbad8887128b0fcb27/torch_spyre/_inductor/patches.py#L85)                       | still-required     |
+| L5  | extension-point  | `torch._inductor.config.post_grad_custom_post_pass`                                             | [patches.py#L86](https://github.com/torch-spyre/torch-spyre/blob/fea0c4be901e1383b1f700dbad8887128b0fcb27/torch_spyre/_inductor/patches.py#L86)                       | still-required     |
+| L6  | extension-point  | `torch._inductor.config._pre_fusion_custom_pass`                                                | [patches.py#L87](https://github.com/torch-spyre/torch-spyre/blob/fea0c4be901e1383b1f700dbad8887128b0fcb27/torch_spyre/_inductor/patches.py#L87)                       | still-required     |
+| L7  | extension-point  | `torch._inductor.config._post_fusion_custom_pass`                                               | [patches.py#L88](https://github.com/torch-spyre/torch-spyre/blob/fea0c4be901e1383b1f700dbad8887128b0fcb27/torch_spyre/_inductor/patches.py#L88)                       | still-required     |
+| L8  | config           | `torch._inductor.config.unroll_reductions_threshold`                                            | [patches.py#L91](https://github.com/torch-spyre/torch-spyre/blob/fea0c4be901e1383b1f700dbad8887128b0fcb27/torch_spyre/_inductor/patches.py#L91)                       | still-required     |
+| L9  | config           | `torch._inductor.config.permute_fusion`                                                         | [patches.py#L93](https://github.com/torch-spyre/torch-spyre/blob/fea0c4be901e1383b1f700dbad8887128b0fcb27/torch_spyre/_inductor/patches.py#L93)                       | still-required     |
+| L10 | config           | `torch._inductor.config.allow_buffer_reuse`                                                     | [patches.py#L94](https://github.com/torch-spyre/torch-spyre/blob/fea0c4be901e1383b1f700dbad8887128b0fcb27/torch_spyre/_inductor/patches.py#L94)                       | still-required     |
+| L11 | mutation         | `torch._inductor.ir.Loops.has_large_inner_fn`                                                   | [patches.py#L101](https://github.com/torch-spyre/torch-spyre/blob/fea0c4be901e1383b1f700dbad8887128b0fcb27/torch_spyre/_inductor/patches.py#L101)                     | still-required     |
+| L12 | mutation         | `torch._inductor.fx_passes.joint_graph.pass_patterns` (positional pop)                          | [patches.py#L107](https://github.com/torch-spyre/torch-spyre/blob/fea0c4be901e1383b1f700dbad8887128b0fcb27/torch_spyre/_inductor/patches.py#L107)                     | needs-testing      |
+| L13 | mutation         | `torch._inductor.graph.GraphLowering._update_scheduler`                                         | [patches.py#L130](https://github.com/torch-spyre/torch-spyre/blob/fea0c4be901e1383b1f700dbad8887128b0fcb27/torch_spyre/_inductor/patches.py#L130)                     | still-required     |
+| L14a| mutation         | `torch._inductor.scheduler.SchedulerNode.has_side_effects` (branch: `_coarse_tile_force_live`)  | [patches.py#L132-L143](https://github.com/torch-spyre/torch-spyre/blob/fea0c4be901e1383b1f700dbad8887128b0fcb27/torch_spyre/_inductor/patches.py#L132-L143)           | needs-testing      |
+| L14b| mutation         | `torch._inductor.scheduler.SchedulerNode.has_side_effects` (branch: `MutationLayoutSHOULDREMOVE`) | [patches.py#L149-L156](https://github.com/torch-spyre/torch-spyre/blob/fea0c4be901e1383b1f700dbad8887128b0fcb27/torch_spyre/_inductor/patches.py#L149-L156)           | unknown            |
+| L15 | mutation         | `torch._inductor.fx_passes.post_grad.pass_patterns[2]` + `is_valid_addmm_fusion` swap           | [patches.py#L186-L199](https://github.com/torch-spyre/torch-spyre/blob/fea0c4be901e1383b1f700dbad8887128b0fcb27/torch_spyre/_inductor/patches.py#L186-L199)           | needs-testing      |
+| L16 | mutation         | `torch.fx.passes.graph_transform_observer.GraphTransformObserver.apply_graph_pass`              | [patches.py#L218](https://github.com/torch-spyre/torch-spyre/blob/fea0c4be901e1383b1f700dbad8887128b0fcb27/torch_spyre/_inductor/patches.py#L218)                     | still-required     |
+
+<!-- machine-readable-ledger:end -->
+
+Row-by-row totals derived from the table above:
+
+- Physical override sites (rows, counting L14 as one): **16**
+- Verdict slots (rows with L14 split into L14a + L14b): **17**
+- `kind = config`: **5** (L1, L2, L8, L9, L10)
+- `kind = extension-point`: **5** (L3, L4, L5, L6, L7)
+- `kind = mutation`: **7** (L11, L12, L13, L14a, L14b, L15, L16)
+- `verdict = still-required`: **13** (L1–L11, L13, L16)
+- `verdict = needs-testing`: **3** (L12, L14a, L15)
+- `verdict = possibly-obsolete`: **0**
+- `verdict = unknown`: **1** (L14b)
 
 ## Upstream behavior
 
