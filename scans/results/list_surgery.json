@@ -1,0 +1,379 @@
+{
+  "scanner": "list_surgery",
+  "torch_spyre_sha": "fea0c4be901e1383b1f700dbad8887128b0fcb27",
+  "scanned_files": 302,
+  "total_hits": 53,
+  "hits": [
+    {
+      "file": "torch_spyre/_inductor/deadcode_elimination.py",
+      "line": 97,
+      "kind": "operations.remove.in_for_loop_n_times_m",
+      "snippet": "        operations.remove(op)",
+      "context": "function=deadcode_elimination; target=operations; collection=operations; method=remove; in_for_loop=True; loop_var=op; loop_iter=dead; hard_n2=False; soft_n_times_m=True"
+    },
+    {
+      "file": "torch_spyre/_inductor/insert_restickify.py",
+      "line": 220,
+      "kind": "operations.remove.in_for_loop_n_times_m",
+      "snippet": "        operations.remove(restick_buff)",
+      "context": "function=insert_restickify_on_node_inputs; target=operations; collection=operations; method=remove; in_for_loop=True; loop_var=restick_arg_info; loop_iter=resticks_needed; hard_n2=False; soft_n_times_m=True"
+    },
+    {
+      "file": "torch_spyre/_inductor/insert_restickify.py",
+      "line": 221,
+      "kind": "operations.insert.in_for_loop_n_times_m",
+      "snippet": "        operations.insert(op_index, restick_buff)",
+      "context": "function=insert_restickify_on_node_inputs; target=operations; collection=operations; method=insert; in_for_loop=True; loop_var=restick_arg_info; loop_iter=resticks_needed; hard_n2=False; soft_n_times_m=True"
+    },
+    {
+      "file": "torch_spyre/_inductor/insert_restickify.py",
+      "line": 595,
+      "kind": "operations.index.in_for_loop_n_times_m",
+      "snippet": "        mutation_op_index = operations.index(mutation_op)",
+      "context": "function=insert_post_mutation_restickify; target=operations; collection=operations; method=index; in_for_loop=True; loop_var=mutation_op; loop_iter=tagged_ops; hard_n2=False; soft_n_times_m=True"
+    },
+    {
+      "file": "torch_spyre/_inductor/insert_restickify.py",
+      "line": 596,
+      "kind": "operations.remove.in_for_loop_n_times_m",
+      "snippet": "        operations.remove(buf_tmp)",
+      "context": "function=insert_post_mutation_restickify; target=operations; collection=operations; method=remove; in_for_loop=True; loop_var=mutation_op; loop_iter=tagged_ops; hard_n2=False; soft_n_times_m=True"
+    },
+    {
+      "file": "torch_spyre/_inductor/insert_restickify.py",
+      "line": 597,
+      "kind": "operations.insert.in_for_loop_n_times_m",
+      "snippet": "        operations.insert(mutation_op_index, buf_tmp)",
+      "context": "function=insert_post_mutation_restickify; target=operations; collection=operations; method=insert; in_for_loop=True; loop_var=mutation_op; loop_iter=tagged_ops; hard_n2=False; soft_n_times_m=True"
+    },
+    {
+      "file": "torch_spyre/_inductor/insert_restickify.py",
+      "line": 599,
+      "kind": "operations.remove.in_for_loop_n_times_m",
+      "snippet": "        operations.remove(buf_copyback)",
+      "context": "function=insert_post_mutation_restickify; target=operations; collection=operations; method=remove; in_for_loop=True; loop_var=mutation_op; loop_iter=tagged_ops; hard_n2=False; soft_n_times_m=True"
+    },
+    {
+      "file": "torch_spyre/_inductor/insert_restickify.py",
+      "line": 600,
+      "kind": "operations.insert.in_for_loop_n_times_m",
+      "snippet": "        operations.insert(mutation_op_index + 2, buf_copyback)",
+      "context": "function=insert_post_mutation_restickify; target=operations; collection=operations; method=insert; in_for_loop=True; loop_var=mutation_op; loop_iter=tagged_ops; hard_n2=False; soft_n_times_m=True"
+    },
+    {
+      "file": "torch_spyre/_inductor/padding.py",
+      "line": 297,
+      "kind": "operations.remove.in_for_loop_n_times_m",
+      "snippet": "            operations.remove(new_op)",
+      "context": "function=insert_bmm_padding; target=operations; collection=operations; method=remove; in_for_loop=True; loop_var=new_op; loop_iter=y_new_ops; hard_n2=False; soft_n_times_m=True"
+    },
+    {
+      "file": "torch_spyre/_inductor/padding.py",
+      "line": 298,
+      "kind": "operations.index.in_for_loop_n_times_m",
+      "snippet": "        op_idx = operations.index(op)",
+      "context": "function=insert_bmm_padding; target=operations; collection=operations; method=index; in_for_loop=True; loop_var=op; loop_iter=<call>; hard_n2=False; soft_n_times_m=True"
+    },
+    {
+      "file": "torch_spyre/_inductor/padding.py",
+      "line": 300,
+      "kind": "operations.insert.in_for_loop_n_times_m",
+      "snippet": "            operations.insert(op_idx + i, new_op)",
+      "context": "function=insert_bmm_padding; target=operations; collection=operations; method=insert; in_for_loop=True; loop_var=-; loop_iter=<call>; hard_n2=False; soft_n_times_m=True"
+    },
+    {
+      "file": "torch_spyre/_inductor/propagate_layouts.py",
+      "line": 1605,
+      "kind": "operations.remove.in_for_loop_n_times_m",
+      "snippet": "        operations.remove(op)",
+      "context": "function=_resolve_copy_back_candidates; target=operations; collection=operations; method=remove; in_for_loop=True; loop_var=op; loop_iter=removed_ops; hard_n2=False; soft_n_times_m=True"
+    },
+    {
+      "file": "torch_spyre/_inductor/scratchpad/allocator.py",
+      "line": 961,
+      "kind": "buffers.insert.in_for_loop_n_times_m",
+      "snippet": "            buffers.insert(buffers.index(source), destination)",
+      "context": "function=_append_lx_relayout_destinations; target=buffers; collection=buffers; method=insert; in_for_loop=True; loop_var=-; loop_iter=entries; hard_n2=False; soft_n_times_m=True"
+    },
+    {
+      "file": "torch_spyre/_inductor/scratchpad/allocator.py",
+      "line": 961,
+      "kind": "buffers.index.in_for_loop_n_times_m",
+      "snippet": "            buffers.insert(buffers.index(source), destination)",
+      "context": "function=_append_lx_relayout_destinations; target=buffers; collection=buffers; method=index; in_for_loop=True; loop_var=-; loop_iter=entries; hard_n2=False; soft_n_times_m=True"
+    },
+    {
+      "file": "torch_spyre/_inductor/split_multi_ops.py",
+      "line": 576,
+      "kind": "operations.remove.in_for_loop_n_times_m",
+      "snippet": "            gl.operations.remove(new_buf)",
+      "context": "function=_make_intermediate_bufs; target=gl.operations; collection=operations; method=remove; in_for_loop=True; loop_var=-; loop_iter=intermediate_ops; hard_n2=False; soft_n_times_m=True"
+    },
+    {
+      "file": "torch_spyre/_inductor/split_multi_ops.py",
+      "line": 577,
+      "kind": "operations.insert.in_for_loop_n_times_m",
+      "snippet": "            operations.insert(insert_idx, new_buf)",
+      "context": "function=_make_intermediate_bufs; target=operations; collection=operations; method=insert; in_for_loop=True; loop_var=-; loop_iter=intermediate_ops; hard_n2=False; soft_n_times_m=True"
+    },
+    {
+      "file": "torch_spyre/_inductor/split_multi_ops.py",
+      "line": 837,
+      "kind": "operations.index.in_for_loop_n_times_m",
+      "snippet": "            insert_idx = operations.index(op)",
+      "context": "function=split_multi_ops; target=operations; collection=operations; method=index; in_for_loop=True; loop_var=op; loop_iter=<call>; hard_n2=False; soft_n_times_m=True"
+    },
+    {
+      "file": "tests/inductor/test_padding.py",
+      "line": 166,
+      "kind": "operations.index",
+      "snippet": "        idx = operations.index(target)",
+      "context": "function=_ops_before; target=operations; collection=operations; method=index; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "tests/inductor/test_provenance_observer.py",
+      "line": 536,
+      "kind": "operations.remove",
+      "snippet": "            graph.operations.remove(removed)",
+      "context": "function=test_removed_buffer_without_forwarding_warns; target=graph.operations; collection=operations; method=remove; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "tests/inductor/test_provenance_observer.py",
+      "line": 583,
+      "kind": "operations.remove",
+      "snippet": "            graph.operations.remove(dead)",
+      "context": "function=test_deadcode_removal_is_silent; target=graph.operations; collection=operations; method=remove; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/dedup_constants.py",
+      "line": 97,
+      "kind": "operations.remove",
+      "snippet": "    operations.remove(dup)",
+      "context": "function=_drop_constant; target=operations; collection=operations; method=remove; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/enforce_indirect_access_layout.py",
+      "line": 384,
+      "kind": "operations.index",
+      "snippet": "    mutation_op_index = operations.index(mutation_op)",
+      "context": "function=_insert_mutation_relayout_copy; target=operations; collection=operations; method=index; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/enforce_indirect_access_layout.py",
+      "line": 385,
+      "kind": "operations.remove",
+      "snippet": "    operations.remove(buf_tmp)",
+      "context": "function=_insert_mutation_relayout_copy; target=operations; collection=operations; method=remove; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/enforce_indirect_access_layout.py",
+      "line": 386,
+      "kind": "operations.insert",
+      "snippet": "    operations.insert(mutation_op_index, buf_tmp)",
+      "context": "function=_insert_mutation_relayout_copy; target=operations; collection=operations; method=insert; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/enforce_indirect_access_layout.py",
+      "line": 397,
+      "kind": "operations.remove",
+      "snippet": "    operations.remove(buf_copyback)",
+      "context": "function=_insert_mutation_relayout_copy; target=operations; collection=operations; method=remove; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/enforce_indirect_access_layout.py",
+      "line": 398,
+      "kind": "operations.insert",
+      "snippet": "    operations.insert(mutation_op_index + 2, buf_copyback)",
+      "context": "function=_insert_mutation_relayout_copy; target=operations; collection=operations; method=insert; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/insert_restickify.py",
+      "line": 208,
+      "kind": "operations.index",
+      "snippet": "        op_index = operations.index(op)",
+      "context": "function=insert_restickify_on_node_inputs; target=operations; collection=operations; method=index; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/pass_utils.py",
+      "line": 1347,
+      "kind": "operations.index",
+      "snippet": "    op_idx = operations.index(op)",
+      "context": "function=replace_computed_buffer_body; target=operations; collection=operations; method=index; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/scratchpad/graph_editor.py",
+      "line": 226,
+      "kind": "operations.remove",
+      "snippet": "        self.lowering.operations.remove(new_com_buf)",
+      "context": "function=push_allocation_with_clone; target=self.lowering.operations; collection=operations; method=remove; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/scratchpad/graph_editor.py",
+      "line": 227,
+      "kind": "operations.insert",
+      "snippet": "        self.lowering.operations.insert(",
+      "context": "function=push_allocation_with_clone; target=self.lowering.operations; collection=operations; method=insert; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/scratchpad/graph_editor.py",
+      "line": 228,
+      "kind": "operations.index",
+      "snippet": "            self.lowering.operations.index(buffer_users[0]), new_com_buf",
+      "context": "function=push_allocation_with_clone; target=self.lowering.operations; collection=operations; method=index; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/split_multi_ops.py",
+      "line": 481,
+      "kind": "operations.remove",
+      "snippet": "    gl.operations.remove(buf)",
+      "context": "function=_lower_fx_node; target=gl.operations; collection=operations; method=remove; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile.py",
+      "line": 2295,
+      "kind": "operations.remove",
+      "snippet": "    operations.remove(full_buf)",
+      "context": "function=_allocate_full_buffer; target=operations; collection=operations; method=remove; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile.py",
+      "line": 2296,
+      "kind": "operations.insert",
+      "snippet": "    operations.insert(insert_at_idx, full_buf)",
+      "context": "function=_allocate_full_buffer; target=operations; collection=operations; method=insert; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile.py",
+      "line": 2459,
+      "kind": "operations.index",
+      "snippet": "    tiled_idx = operations.index(tiled_op)",
+      "context": "function=_insert_copy_op; target=operations; collection=operations; method=index; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile.py",
+      "line": 2484,
+      "kind": "operations.insert",
+      "snippet": "    operations.insert(insert_after_idx + 1, copy_buf)",
+      "context": "function=_insert_copy_op; target=operations; collection=operations; method=insert; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile.py",
+      "line": 2686,
+      "kind": "operations.index",
+      "snippet": "    insert_idx = operations.index(insert_before_op)",
+      "context": "function=_insert_one_read_copy; target=operations; collection=operations; method=index; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile.py",
+      "line": 3063,
+      "kind": "operations.insert",
+      "snippet": "    operations.insert(insert_idx, copy_buf)",
+      "context": "function=_insert_one_read_copy; target=operations; collection=operations; method=insert; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile.py",
+      "line": 3473,
+      "kind": "operations.index",
+      "snippet": "    tiled_idx = operations.index(tiled_op)",
+      "context": "function=_insert_combine_op; target=operations; collection=operations; method=index; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile.py",
+      "line": 3474,
+      "kind": "operations.insert",
+      "snippet": "    operations.insert(tiled_idx + 1, combine_buf)",
+      "context": "function=_insert_combine_op; target=operations; collection=operations; method=insert; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile.py",
+      "line": 3561,
+      "kind": "operations.index",
+      "snippet": "        insert_idx = operations.index(insert_after) + 1",
+      "context": "function=_insert_reduction_copy_op; target=operations; collection=operations; method=index; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile.py",
+      "line": 3568,
+      "kind": "operations.index",
+      "snippet": "            insert_idx = operations.index(combine_buf) + 1",
+      "context": "function=_insert_reduction_copy_op; target=operations; collection=operations; method=index; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile.py",
+      "line": 3570,
+      "kind": "operations.index",
+      "snippet": "            insert_idx = operations.index(tiled_op) + 1",
+      "context": "function=_insert_reduction_copy_op; target=operations; collection=operations; method=index; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile.py",
+      "line": 3571,
+      "kind": "operations.insert",
+      "snippet": "    operations.insert(insert_idx, copy_buf)",
+      "context": "function=_insert_reduction_copy_op; target=operations; collection=operations; method=insert; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile.py",
+      "line": 3682,
+      "kind": "operations.index",
+      "snippet": "        group_start_idx_after_full = operations.index(accum_full) + 1",
+      "context": "function=_propagate_tiled_reduction_op; target=operations; collection=operations; method=index; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile.py",
+      "line": 3755,
+      "kind": "operations.index",
+      "snippet": "    fill_target_idx = operations.index(fill_target)",
+      "context": "function=_propagate_tiled_reduction_op; target=operations; collection=operations; method=index; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile.py",
+      "line": 3758,
+      "kind": "operations.remove",
+      "snippet": "    operations.remove(scalar_op)",
+      "context": "function=_propagate_tiled_reduction_op; target=operations; collection=operations; method=remove; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile.py",
+      "line": 3759,
+      "kind": "operations.insert",
+      "snippet": "    operations.insert(fill_target_idx + 1, scalar_op)",
+      "context": "function=_propagate_tiled_reduction_op; target=operations; collection=operations; method=insert; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile.py",
+      "line": 3760,
+      "kind": "operations.insert",
+      "snippet": "    operations.insert(fill_target_idx + 2, fill_buf)",
+      "context": "function=_propagate_tiled_reduction_op; target=operations; collection=operations; method=insert; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile_hints.py",
+      "line": 250,
+      "kind": "operations.insert",
+      "snippet": "                ops.insert(run_start, ops.pop(j))",
+      "context": "function=reorder_unhinted_interlopers; target=ops; collection=operations; method=insert; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile_hints.py",
+      "line": 250,
+      "kind": "operations.pop",
+      "snippet": "                ops.insert(run_start, ops.pop(j))",
+      "context": "function=reorder_unhinted_interlopers; target=ops; collection=operations; method=pop; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile_hints.py",
+      "line": 257,
+      "kind": "operations.insert",
+      "snippet": "                ops.insert(run_end - 1, ops.pop(j))",
+      "context": "function=reorder_unhinted_interlopers; target=ops; collection=operations; method=insert; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    },
+    {
+      "file": "torch_spyre/_inductor/wsr/coarse_tile_hints.py",
+      "line": 257,
+      "kind": "operations.pop",
+      "snippet": "                ops.insert(run_end - 1, ops.pop(j))",
+      "context": "function=reorder_unhinted_interlopers; target=ops; collection=operations; method=pop; in_for_loop=False; loop_var=-; loop_iter=-; hard_n2=False; soft_n_times_m=False"
+    }
+  ]
+}
